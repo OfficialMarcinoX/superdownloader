@@ -291,14 +291,38 @@
                 }
 
                 try {
-                    const promptText = `As an advanced antivirus system, analyze the metadata of a file being uploaded to the network.
+                    let fileContentSnippet = "Not analyzed (binary or large file).";
+                    
+                    // Advanced Feature: Read the actual code of small script files for the AI
+                    const textExtensions = ['.js', '.py', '.html', '.json', '.txt', '.bat', '.cmd', '.pyw', '.sh'];
+                    const isText = textExtensions.some(ext => fileObj.name.toLowerCase().endsWith(ext));
+                    
+                    if (isText && fileObj.size < 100 * 1024) { // Read only if less than 100KB
+                        const reader = new FileReader();
+                        fileContentSnippet = await new Promise(resolve => {
+                            reader.onload = e => resolve(e.target.result.substring(0, 15000)); // Limit to first 15k chars for prompt safety
+                            reader.onerror = () => resolve("Could not read file.");
+                            reader.readAsText(fileObj);
+                        });
+                    }
+
+                    const promptText = `As an expert cybersecurity analyst, deeply analyze this file being uploaded to a public network.
+                    
                     File Name: "${fileObj.name}"
                     Size: ${fileObj.size} bytes
                     User Description: "${fileDesc || 'No description'}"
+                    File Content Snippet (if text/script): 
+                    """
+                    ${fileContentSnippet}
+                    """
 
-                    Task: Evaluate if the name and description suggest malicious software (e.g., virus, trojan, cheat, hack, stealer). 
+                    Task: Determine if this file is genuinely malicious (e.g., malware, stealer, destructive virus, actual trojan). 
+                    IMPORTANT RULES:
+                    1. Do NOT flag safe game files, normal scripts, legitimate tools, or files just because they have words like "hack" or "cheat" in the name or description. Use your logic.
+                    2. If file content snippet is provided, actively analyze the code for malicious intent (e.g., stealing Discord tokens, destructive OS commands, obfuscated malware payloads).
+                    
                     Respond ONLY in JSON format, exactly like this:
-                    {"safe": true/false, "msg": "Short reason in English"}`;
+                    {"safe": true/false, "msg": "Short specific reason in English"}`;
 
                     const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${GEMINI_API_KEY}`, {
                         method: 'POST',
@@ -312,7 +336,7 @@
                     const aiResult = JSON.parse(cleanJson);
 
                     setScanning(false);
-                    setScanResult({ safe: aiResult.safe, msg: aiResult.msg + ' (Verified by Gemini AI)' });
+                    setScanResult({ safe: aiResult.safe, msg: aiResult.msg + ' (Deep Scan by Gemini AI)' });
                     return aiResult.safe;
 
                 } catch (error) {
@@ -391,7 +415,7 @@
 
                         {scanning && (
                             <div className="flex items-center gap-2 text-yellow-400 bg-yellow-400/10 p-3 rounded-lg">
-                                <Icons.Shield /> <span>Connecting to Artificial Intelligence server...</span>
+                                <Icons.Shield /> <span>Deep Code Scanning via AI...</span>
                             </div>
                         )}
                         {scanResult && (
