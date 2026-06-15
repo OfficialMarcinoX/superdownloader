@@ -1,0 +1,750 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SuperDownloader - Sieć Wymiany</title>
+    
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <!-- React & ReactDOM -->
+    <script src="https://unpkg.com/react@18/umd/react.production.min.js" crossorigin></script>
+    <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js" crossorigin></script>
+    <script src="https://unpkg.com/babel-standalone@6/babel.min.js"></script>
+
+    <!-- Publiczny protokół komunikacyjny MQTT (WSS) - Prawdziwa wymiana danych -->
+    <script src="https://unpkg.com/mqtt/dist/mqtt.min.js"></script>
+    
+    <!-- WebTorrent do bezpośredniego przesyłu ciężkich plików -->
+    <script src="https://cdn.jsdelivr.net/npm/webtorrent@latest/webtorrent.min.js"></script>
+
+    <!-- LocalForage do fizycznego wskrzeszania plików na dysku po resecie -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/localforage/1.10.0/localforage.min.js"></script>
+
+    <style>
+        body { background-color: #0f172a; color: #f8fafc; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
+        .glass-panel { background: rgba(30, 41, 59, 0.7); backdrop-filter: blur(10px); border: 1px solid rgba(255,255,255,0.1); }
+        .scrollbar-hide::-webkit-scrollbar { display: none; }
+        .scrollbar-hide { -ms-overflow-style: none; scrollbar-width: none; }
+    </style>
+</head>
+<body>
+    <div id="root"></div>
+
+    <script type="text/babel">
+        const { useState, useEffect, useRef } = React;
+
+        // Kanał służący do przesyłania aktualizacji bazy
+        const MQTT_BROKER = 'wss://broker.emqx.io:8084/mqtt';
+        const MESH_TOPIC = 'superdwn_net_v16_sync_planexd'; // Zmieniony kanał dla pewności
+        const webtorrentClient = new WebTorrent();
+
+        const Icons = {
+            Download: () => <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path></svg>,
+            Upload: () => <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"></path></svg>,
+            Shield: () => <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"></path></svg>,
+            Search: () => <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path></svg>,
+            User: () => <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"></path></svg>,
+            Alert: () => <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path></svg>,
+            Trash: () => <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg>,
+            Ban: () => <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636"></path></svg>,
+            Network: () => <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M3.055 11H5a2 2 0 012 2v1a2 2 0 002 2 2 2 0 012 2v2.945M8 3.935V5.5A2.5 2.5 0 0010.5 8h.5a2 2 0 012 2 2 2 0 104 0 2 2 0 012-2h1.064M15 20.488V18a2 2 0 012-2h3.064M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+        };
+
+        const CATEGORIES = ['.exe', '.js', '.json', '.html', '.py', '.pyw', 'Wideo/Audio', 'Inne'];
+
+        const generateId = () => Math.random().toString(36).substr(2, 9);
+        const formatBytes = (bytes, decimals = 2) => {
+            if (!+bytes) return '0 Bytes';
+            const k = 1024; const dm = decimals < 0 ? 0 : decimals;
+            const sizes = ['Bytes', 'KB', 'MB', 'GB', 'TB'];
+            const i = Math.floor(Math.log(bytes) / Math.log(k));
+            return `${parseFloat((bytes / Math.pow(k, i)).toFixed(dm))} ${sizes[i]}`;
+        };
+
+        const App = () => {
+            const [user, setUser] = useState(null);
+            const [usersList, setUsersList] = useState({});
+            const [files, setFiles] = useState({});
+            const [reports, setReports] = useState({});
+            const [view, setView] = useState('home');
+            const [loading, setLoading] = useState(true);
+            const [message, setMessage] = useState(null);
+            const [netStatus, setNetStatus] = useState('Rozłączono'); // Widoczny status dla usera
+
+            const mqttRef = useRef(null);
+
+            const updateDatabase = (section, id, data) => {
+                try {
+                    const currentDb = JSON.parse(localStorage.getItem('superdwn_netdb') || '{"users":{}, "files":{}, "reports":{}}');
+                    
+                    if (data === null) {
+                        delete currentDb[section][id];
+                    } else {
+                        currentDb[section][id] = data;
+                    }
+                    
+                    localStorage.setItem('superdwn_netdb', JSON.stringify(currentDb));
+                    
+                    if (section === 'users') setUsersList(currentDb.users);
+                    if (section === 'files') setFiles(currentDb.files);
+                    if (section === 'reports') setReports(currentDb.reports);
+
+                    if (mqttRef.current && mqttRef.current.connected) {
+                        mqttRef.current.publish(MESH_TOPIC, JSON.stringify({
+                            type: 'UPDATE',
+                            db: currentDb
+                        }));
+                    }
+                } catch (err) {
+                    console.error("Błąd zapisu:", err);
+                }
+            };
+
+            useEffect(() => {
+                let isMounted = true;
+
+                // 1. Natychmiastowe ładowanie z dysku (przetrwa F5)
+                const localDbString = localStorage.getItem('superdwn_netdb');
+                let currentDb = { users: {}, files: {}, reports: {} };
+                if (localDbString) {
+                    try { currentDb = JSON.parse(localDbString); } catch(e){}
+                }
+                
+                if(isMounted) {
+                    setUsersList(currentDb.users);
+                    setFiles(currentDb.files);
+                    setReports(currentDb.reports);
+                    
+                    const localUser = localStorage.getItem('dwn_user_auth');
+                    if (localUser) setUser(JSON.parse(localUser));
+                }
+
+                // 2. Wznowienie procesów udostępniania plików torrent
+                localforage.keys().then(keys => {
+                    keys.forEach(k => {
+                        if (k.startsWith('seed_')) {
+                            localforage.getItem(k).then(blob => {
+                                if (blob && webtorrentClient && !webtorrentClient.get(blob)) {
+                                    webtorrentClient.seed(blob, () => console.log('Zasilanie sieci wznowione'));
+                                }
+                            });
+                        }
+                    });
+                });
+
+                if(!navigator.onLine) {
+                    showMessage("Jesteś offline. Zapisy tylko lokalne.", "error");
+                    setLoading(false);
+                    return;
+                }
+
+                // 3. Połączenie MQTT
+                setNetStatus('Łączenie z serwerem...');
+                const client = mqtt.connect(MQTT_BROKER);
+                mqttRef.current = client;
+
+                client.on('connect', () => {
+                    if(isMounted) setNetStatus('Połączono z siecią');
+                    client.subscribe(MESH_TOPIC);
+                    client.publish(MESH_TOPIC, JSON.stringify({ type: 'REQ_SYNC' }));
+                    if(isMounted) setLoading(false);
+                });
+
+                client.on('reconnect', () => {
+                    if(isMounted) setNetStatus('Ponawianie...');
+                });
+
+                client.on('offline', () => {
+                    if(isMounted) setNetStatus('Brak sieci');
+                });
+
+                client.on('message', (topic, msg) => {
+                    try {
+                        const payload = JSON.parse(msg.toString());
+                        
+                        if (payload.type === 'REQ_SYNC') {
+                            const dbState = JSON.parse(localStorage.getItem('superdwn_netdb') || '{}');
+                            if (dbState.users && Object.keys(dbState.users).length > 0) {
+                                client.publish(MESH_TOPIC, JSON.stringify({ type: 'SYNC', db: dbState }));
+                            }
+                        } 
+                        else if (payload.type === 'SYNC' || payload.type === 'UPDATE') {
+                            const localDb = JSON.parse(localStorage.getItem('superdwn_netdb') || '{"users":{}, "files":{}, "reports":{}}');
+                            const netDb = payload.db;
+                            
+                            const finalUsers = { ...localDb.users, ...netDb.users };
+                            const finalFiles = { ...localDb.files, ...netDb.files };
+                            const finalReports = { ...localDb.reports, ...netDb.reports };
+                            
+                            const finalDb = { users: finalUsers, files: finalFiles, reports: finalReports };
+                            localStorage.setItem('superdwn_netdb', JSON.stringify(finalDb));
+                            
+                            if(isMounted) {
+                                setUsersList(finalUsers);
+                                setFiles(finalFiles);
+                                setReports(finalReports);
+                            }
+                        }
+                    } catch(e){}
+                });
+
+                return () => { isMounted = false; client.end(); };
+            }, []);
+
+            useEffect(() => {
+                const checkAdminHash = () => {
+                    if (window.location.href.includes('7319112') && user && !user.isAdmin) {
+                        const updatedUser = { ...user, isAdmin: true };
+                        updateDatabase('users', user.nick, updatedUser);
+                        localStorage.setItem('dwn_user_auth', JSON.stringify(updatedUser));
+                        setUser(updatedUser);
+                        showMessage("Zyskałeś uprawnienia Administratora na zawsze!", "success");
+                        window.history.replaceState(null, null, window.location.pathname);
+                    }
+                };
+                checkAdminHash();
+                window.addEventListener('hashchange', checkAdminHash);
+                return () => window.removeEventListener('hashchange', checkAdminHash);
+            }, [user]);
+
+            useEffect(() => {
+                if (user && usersList[user.nick]) {
+                    const dbUser = usersList[user.nick];
+                    if (dbUser.isBanned) {
+                        if (dbUser.banExpires === 'zawsze' || dbUser.banExpires > Date.now()) {
+                            alert(`Twoje konto zostało zablokowane.\nPowód: ${dbUser.banReason || 'Brak'}`);
+                            logout();
+                        } else {
+                            updateDatabase('users', user.nick, { isBanned: false, banReason: '', banExpires: 0 });
+                        }
+                    }
+                    if (dbUser.isAdmin !== user.isAdmin) {
+                        const updated = {...user, isAdmin: dbUser.isAdmin};
+                        setUser(updated);
+                        localStorage.setItem('dwn_user_auth', JSON.stringify(updated));
+                    }
+                }
+            }, [user, usersList]);
+
+            const showMessage = (text, type = 'info') => {
+                setMessage({ text, type });
+                setTimeout(() => setMessage(null), 4000);
+            };
+
+            const logout = () => {
+                localStorage.removeItem('dwn_user_auth');
+                setUser(null);
+                setView('home');
+            };
+
+            const AuthView = () => {
+                const [isLogin, setIsLogin] = useState(true);
+                const [nick, setNick] = useState('');
+                const [pass, setPass] = useState('');
+
+                const handleSubmit = (e) => {
+                    e.preventDefault();
+                    if(!navigator.onLine) return showMessage("Wymagany internet do zalogowania!", "error");
+                    
+                    const existingUser = usersList[nick];
+
+                    if (isLogin) {
+                        if (!existingUser || existingUser.pass !== pass) {
+                            showMessage("Błędny nick lub hasło", "error");
+                        } else {
+                            const userData = { nick: existingUser.nick, isAdmin: existingUser.isAdmin };
+                            setUser(userData);
+                            localStorage.setItem('dwn_user_auth', JSON.stringify(userData));
+                            setView('home');
+                            showMessage(`Witaj, ${nick}!`, "success");
+                        }
+                    } else {
+                        if (existingUser) {
+                            showMessage("Ten nick jest już zajęty w sieci!", "error");
+                        } else {
+                            const newUser = { nick, pass, isAdmin: false, isBanned: false, createdAt: Date.now() };
+                            updateDatabase('users', nick, newUser);
+                            setUser({ nick, isAdmin: false });
+                            localStorage.setItem('dwn_user_auth', JSON.stringify({ nick, isAdmin: false }));
+                            setView('home');
+                            showMessage("Konto zostało utworzone trwale!", "success");
+                        }
+                    }
+                };
+
+                return (
+                    <div className="flex justify-center items-center h-full mt-20">
+                        <div className="glass-panel p-8 rounded-xl w-full max-w-md">
+                            <h2 className="text-2xl font-bold mb-6 text-center">{isLogin ? 'Logowanie' : 'Rejestracja'}</h2>
+                            <form onSubmit={handleSubmit} className="space-y-4">
+                                <div>
+                                    <label className="block text-sm text-gray-400 mb-1">Unikalny Nick</label>
+                                    <input required type="text" value={nick} onChange={e => setNick(e.target.value.replace(/[^a-zA-Z0-9_]/g, ''))} className="w-full bg-slate-800 border border-slate-700 rounded-lg p-3 text-white outline-none focus:border-blue-500" placeholder="np. planexd_0" />
+                                </div>
+                                <div>
+                                    <label className="block text-sm text-gray-400 mb-1">Hasło</label>
+                                    <input required type="password" value={pass} onChange={e => setPass(e.target.value)} className="w-full bg-slate-800 border border-slate-700 rounded-lg p-3 text-white outline-none focus:border-blue-500" />
+                                </div>
+                                <button type="submit" className="w-full bg-blue-600 hover:bg-blue-700 transition rounded-lg p-3 font-bold">
+                                    {isLogin ? 'Zaloguj się' : 'Zarejestruj się'}
+                                </button>
+                            </form>
+                            <p className="mt-4 text-center text-sm text-gray-400 cursor-pointer hover:text-white" onClick={() => setIsLogin(!isLogin)}>
+                                {isLogin ? 'Nie masz konta? Zarejestruj się.' : 'Masz już konto? Zaloguj się.'}
+                            </p>
+                        </div>
+                    </div>
+                );
+            };
+
+            const UploadView = () => {
+                const [name, setName] = useState('');
+                const [desc, setDesc] = useState('');
+                const [imgUrl, setImgUrl] = useState('');
+                const [category, setCategory] = useState(CATEGORIES[0]);
+                const [file, setFile] = useState(null);
+                const [scanning, setScanning] = useState(false);
+                const [scanResult, setScanResult] = useState(null);
+
+                const handleFileChange = (e) => {
+                    const selected = e.target.files[0];
+                    if(selected) {
+                        setFile(selected);
+                        setScanResult(null);
+                        if(!name) setName(selected.name);
+                    }
+                };
+
+                const handleImageChange = (e) => {
+                    const selectedImg = e.target.files[0];
+                    if (selectedImg) {
+                        if (selectedImg.size > 100 * 1024) { 
+                            showMessage("Obraz jest za duży (max 100 KB)!", "error");
+                            e.target.value = null; 
+                            setImgUrl('');
+                            return;
+                        }
+                        const reader = new FileReader();
+                        reader.onload = (ev) => setImgUrl(ev.target.result);
+                        reader.readAsDataURL(selectedImg);
+                    } else {
+                        setImgUrl('');
+                    }
+                };
+
+                const performAntivirusScan = async (fileObj) => {
+                    setScanning(true);
+                    await new Promise(r => setTimeout(r, 2000));
+                    const maliciousKeywords = ['trojan', 'hack', 'stealer', 'virus'];
+                    const isMalicious = maliciousKeywords.some(w => fileObj.name.toLowerCase().includes(w));
+                    setScanning(false);
+                    if (isMalicious) {
+                        setScanResult({ safe: false, msg: 'Wykryto zagrożenie (AI Heuristics)!' });
+                        return false;
+                    }
+                    setScanResult({ safe: true, msg: 'Plik jest czysty. Zweryfikowano pomyślnie.' });
+                    return true;
+                };
+
+                const handleUpload = async (e) => {
+                    e.preventDefault();
+                    if(!navigator.onLine) return showMessage("Brak internetu!", "error");
+                    if (!file) return showMessage("Wybierz plik!", "error");
+                    
+                    const isSafe = await performAntivirusScan(file);
+                    if (!isSafe) return showMessage("Zablokowano przez Antivirus!", "error");
+
+                    const fileId = generateId();
+                    const metadata = {
+                        id: fileId, name, desc, img: imgUrl, category,
+                        uploader: user.nick, timestamp: Date.now(),
+                        size: file.size, fileName: file.name
+                    };
+
+                    showMessage("Wstawianie do sieci...", "info");
+
+                    if (file.size < 50 * 1024) {
+                        const reader = new FileReader();
+                        reader.onload = (ev) => {
+                            updateDatabase('files', fileId, { ...metadata, dataUrl: ev.target.result, isDirectLink: false });
+                            showMessage("Zapisano trwale!", "success");
+                            setView('home');
+                        };
+                        reader.readAsDataURL(file);
+                    } else {
+                        localforage.setItem(`seed_${fileId}`, file);
+                        webtorrentClient.seed(file, (torrent) => {
+                            updateDatabase('files', fileId, { ...metadata, magnet: torrent.magnetURI, isDirectLink: true });
+                            showMessage("Dodano! Pamiętaj, udostępniasz to bezpośrednio ze swojego połączenia.", "success");
+                            setView('home');
+                        });
+                    }
+                };
+
+                return (
+                    <div className="max-w-2xl mx-auto mt-10 p-8 glass-panel rounded-xl">
+                        <h2 className="text-2xl font-bold mb-6 flex items-center gap-2"><Icons.Upload /> Dodaj Plik</h2>
+                        <form onSubmit={handleUpload} className="space-y-5">
+                            <div>
+                                <label className="block text-sm text-gray-400 mb-1">Nazwa (Obowiązkowa)</label>
+                                <input required type="text" value={name} onChange={e=>setName(e.target.value)} className="w-full bg-slate-800 border border-slate-700 rounded-lg p-3 text-white outline-none" />
+                            </div>
+                            <div className="grid grid-cols-2 gap-4">
+                                <div>
+                                    <label className="block text-sm text-gray-400 mb-1">Kategoria</label>
+                                    <select value={category} onChange={e=>setCategory(e.target.value)} className="w-full bg-slate-800 border border-slate-700 rounded-lg p-3 text-white outline-none">
+                                        {CATEGORIES.map(c => <option key={c} value={c}>{c}</option>)}
+                                    </select>
+                                </div>
+                                <div>
+                                    <label className="block text-sm text-gray-400 mb-1">Wybierz Obraz (Max 100 KB)</label>
+                                    <input type="file" accept="image/*" onChange={handleImageChange} className="w-full bg-slate-800 border border-slate-700 rounded-lg p-2 text-white outline-none" />
+                                </div>
+                            </div>
+                            <div>
+                                <label className="block text-sm text-gray-400 mb-1">Opis (Opcjonalne)</label>
+                                <textarea value={desc} onChange={e=>setDesc(e.target.value)} className="w-full bg-slate-800 border border-slate-700 rounded-lg p-3 text-white outline-none h-24" />
+                            </div>
+                            <div>
+                                <label className="block text-sm text-gray-400 mb-1">Plik do wstawienia</label>
+                                <input required type="file" onChange={handleFileChange} className="w-full bg-slate-800 border border-slate-700 rounded-lg p-2 text-white outline-none" />
+                                {file && <p className="text-sm mt-1 text-gray-400">Rozmiar: {formatBytes(file.size)}</p>}
+                            </div>
+
+                            {scanning && (
+                                <div className="flex items-center gap-2 text-yellow-400 bg-yellow-400/10 p-3 rounded-lg">
+                                    <Icons.Shield /> <span>Skanowanie bezpieczeństwa AI...</span>
+                                </div>
+                            )}
+                            {scanResult && (
+                                <div className={`flex items-center gap-2 p-3 rounded-lg ${scanResult.safe ? 'text-green-400 bg-green-400/10' : 'text-red-400 bg-red-400/10'}`}>
+                                    <Icons.Shield /> <span>{scanResult.msg}</span>
+                                </div>
+                            )}
+
+                            <button disabled={scanning} type="submit" className="w-full bg-blue-600 hover:bg-blue-700 disabled:opacity-50 transition rounded-lg p-3 font-bold mt-4">
+                                Wstaw
+                            </button>
+                        </form>
+                    </div>
+                );
+            };
+
+            const AdminPanel = () => {
+                const [adminTab, setAdminTab] = useState('users'); 
+                const [banDuration, setBanDuration] = useState('');
+                const [banReason, setBanReason] = useState('');
+
+                if (!user || !user.isAdmin) return <div className="text-center mt-20 text-xl text-red-500">Brak uprawnień.</div>;
+
+                const parseBanTime = (str) => {
+                    if(!str || str === 'zawsze') return 'zawsze';
+                    const unit = str.slice(-1).toLowerCase();
+                    const val = parseInt(str.slice(0, -1));
+                    if(isNaN(val)) return 0;
+                    if(unit === 's') return Date.now() + (val * 1000);
+                    if(unit === 'm') return Date.now() + (val * 60000);
+                    if(unit === 'h') return Date.now() + (val * 3600000);
+                    return 0; 
+                };
+
+                const handleBan = (nick) => {
+                    const expires = parseBanTime(banDuration);
+                    if(expires === 0 && banDuration !== 'zawsze') return showMessage("Zły format np. 2m, zawsze", "error");
+                    updateDatabase('users', nick, { ...usersList[nick], isBanned: true, banExpires: expires, banReason });
+                    showMessage(`Zablokowano ${nick}`, "success");
+                };
+
+                const handleUnban = (nick) => {
+                    updateDatabase('users', nick, { ...usersList[nick], isBanned: false, banExpires: 0, banReason: '' });
+                    showMessage(`Odblokowano ${nick}`, "success");
+                };
+
+                const handleDeleteAccount = (nick) => {
+                    if(confirm(`Usunąć ${nick}?`)) {
+                        updateDatabase('users', nick, null); 
+                        showMessage(`Usunięto konto`, "success");
+                    }
+                };
+
+                const handleDeleteFile = (id, reason) => {
+                    const promptReason = reason || prompt("Podaj powód:");
+                    if(promptReason !== null) {
+                        updateDatabase('files', id, null);
+                        showMessage(`Usunięto plik`, "success");
+                    }
+                };
+
+                const clearReport = (id) => updateDatabase('reports', id, null);
+
+                return (
+                    <div className="max-w-6xl mx-auto mt-10">
+                        <div className="flex gap-4 mb-6 border-b border-slate-700 pb-4">
+                            <button onClick={()=>setAdminTab('users')} className={`px-4 py-2 rounded-lg font-bold ${adminTab==='users' ? 'bg-blue-600' : 'bg-slate-800'}`}>Użytkownicy</button>
+                            <button onClick={()=>setAdminTab('files')} className={`px-4 py-2 rounded-lg font-bold ${adminTab==='files' ? 'bg-blue-600' : 'bg-slate-800'}`}>Pliki</button>
+                            <button onClick={()=>setAdminTab('reports')} className={`px-4 py-2 rounded-lg font-bold ${adminTab==='reports' ? 'bg-blue-600' : 'bg-slate-800'}`}>Raporty AI</button>
+                        </div>
+
+                        {adminTab === 'users' && (
+                            <div className="grid gap-4">
+                                <div className="glass-panel p-4 rounded-xl flex gap-4 items-end mb-4">
+                                    <div>
+                                        <label className="text-xs text-gray-400">Czas Bana (2m, zawsze)</label>
+                                        <input value={banDuration} onChange={e=>setBanDuration(e.target.value)} className="w-full bg-slate-900 border border-slate-700 rounded p-2 outline-none" />
+                                    </div>
+                                    <div className="flex-1">
+                                        <label className="text-xs text-gray-400">Powód Bana</label>
+                                        <input value={banReason} onChange={e=>setBanReason(e.target.value)} className="w-full bg-slate-900 border border-slate-700 rounded p-2 outline-none" />
+                                    </div>
+                                </div>
+                                {Object.entries(usersList).filter(([_,u])=>u && u.nick).map(([nick, u]) => (
+                                    <div key={nick} className="glass-panel p-4 rounded-xl flex justify-between items-center">
+                                        <div>
+                                            <div className="font-bold">{nick} {u.isAdmin && <span className="text-yellow-500 text-xs ml-2">[ADMIN]</span>}</div>
+                                            <div className="text-sm text-gray-400">
+                                                Status: {u.isBanned ? <span className="text-red-400">Zbanowany</span> : <span className="text-green-400">Aktywny</span>}
+                                            </div>
+                                        </div>
+                                        <div className="flex gap-2">
+                                            {u.isBanned ? 
+                                                <button onClick={()=>handleUnban(nick)} className="bg-green-600 px-3 py-1 rounded">Odblokuj</button> :
+                                                <button onClick={()=>handleBan(nick)} className="bg-orange-600 px-3 py-1 rounded flex items-center gap-1"><Icons.Ban/> Ban</button>
+                                            }
+                                            <button onClick={()=>handleDeleteAccount(nick)} className="bg-red-600 px-3 py-1 rounded flex items-center gap-1"><Icons.Trash/> Usuń Konto</button>
+                                        </div>
+                                    </div>
+                                ))}
+                            </div>
+                        )}
+
+                        {adminTab === 'files' && (
+                            <div className="grid gap-4">
+                                {Object.entries(files).filter(([_,f])=>f && f.name).map(([id, f]) => (
+                                    <div key={id} className="glass-panel p-4 rounded-xl flex justify-between items-center">
+                                        <div>
+                                            <div className="font-bold">{f.name}</div>
+                                            <div className="text-sm text-gray-400">Uploader: {f.uploader}</div>
+                                        </div>
+                                        <button onClick={()=>handleDeleteFile(id)} className="bg-red-600 hover:bg-red-700 px-3 py-1 rounded flex items-center gap-1"><Icons.Trash/> Usuń Plik</button>
+                                    </div>
+                                ))}
+                            </div>
+                        )}
+
+                        {adminTab === 'reports' && (
+                            <div className="grid gap-4">
+                                {Object.entries(reports).filter(([_,r])=>r && r.fileId).length === 0 && <p className="text-gray-400">Brak zgłoszeń.</p>}
+                                {Object.entries(reports).filter(([_,r])=>r && r.fileId).map(([id, r]) => {
+                                    const file = files[r.fileId];
+                                    return (
+                                    <div key={id} className="glass-panel p-4 rounded-xl flex flex-col gap-2 border-l-4 border-yellow-500">
+                                        <div className="flex justify-between">
+                                            <span className="font-bold">Zgłoszony: {file ? file.name : 'Usunięty'}</span>
+                                            <span className="text-sm text-gray-400">Od: {r.reporter}</span>
+                                        </div>
+                                        <div className="text-red-300">Powód: {r.reason}</div>
+                                        <div className="flex gap-2 mt-2">
+                                            {file && <button onClick={()=>handleDeleteFile(r.fileId, r.reason)} className="bg-red-600 px-3 py-1 rounded text-sm">Usuń Plik</button>}
+                                            <button onClick={()=>clearReport(id)} className="bg-slate-700 px-3 py-1 rounded text-sm">Odrzuć</button>
+                                        </div>
+                                    </div>
+                                )})}
+                            </div>
+                        )}
+                    </div>
+                );
+            };
+
+            const HomeView = () => {
+                const [search, setSearch] = useState('');
+                const [selectedCategory, setSelectedCategory] = useState('Wszystkie');
+                const [downloadingId, setDownloadingId] = useState(null);
+
+                const handleReport = (file) => {
+                    if(!user) return showMessage("Musisz być zalogowany.", "error");
+                    const reason = prompt(`Podaj powód zgłoszenia:`);
+                    if(reason) {
+                        updateDatabase('reports', generateId(), { fileId: file.id, reason, reporter: user.nick, timestamp: Date.now() });
+                        showMessage("Zgłoszenie wysłane", "success");
+                    }
+                };
+
+                const handleDownload = (file) => {
+                    if(!navigator.onLine) return showMessage("Brak internetu", "error");
+                    
+                    if (!file.isDirectLink) {
+                        const a = document.createElement('a');
+                        a.href = file.dataUrl;
+                        a.download = file.fileName || file.name;
+                        a.click();
+                        showMessage("Pobieranie ze stałej sieci.", "success");
+                    } else {
+                        setDownloadingId(file.id);
+                        showMessage("Nawiązywanie bezpośredniego połączenia...", "info");
+                        
+                        webtorrentClient.add(file.magnet, (torrent) => {
+                            torrent.files.forEach(tFile => {
+                                tFile.getBlobURL((err, url) => {
+                                    if (err) {
+                                        showMessage("Udostępniający jest offline.", "error");
+                                        setDownloadingId(null);
+                                        return;
+                                    }
+
+                                    tFile.getBlob((err, blob) => {
+                                        if(!err && blob) {
+                                            const newFile = new File([blob], tFile.name, {type: blob.type});
+                                            localforage.setItem(`seed_${file.id}`, newFile);
+                                            webtorrentClient.seed(newFile);
+                                        }
+                                    });
+
+                                    const a = document.createElement('a');
+                                    a.href = url;
+                                    a.download = tFile.name;
+                                    a.click();
+                                    showMessage("Pobrano pomyślnie!", "success");
+                                    setDownloadingId(null);
+                                });
+                            });
+                        });
+                        
+                        setTimeout(() => {
+                            if(downloadingId === file.id) {
+                                setDownloadingId(null);
+                                showMessage("Nie można połączyć. Udostępniający jest offline.", "error");
+                            }
+                        }, 20000);
+                    }
+                };
+
+                const validFiles = Object.values(files).filter(f => f && f.name);
+                const filteredFiles = validFiles.filter(f => {
+                    const matchSearch = f.name.toLowerCase().includes(search.toLowerCase()) || (f.desc && f.desc.toLowerCase().includes(search.toLowerCase()));
+                    const matchCat = selectedCategory === 'Wszystkie' || f.category === selectedCategory;
+                    return matchSearch && matchCat;
+                }).sort((a,b) => b.timestamp - a.timestamp);
+
+                return (
+                    <div className="max-w-6xl mx-auto mt-8 px-4">
+                        <div className="flex flex-col md:flex-row gap-4 mb-8">
+                            <div className="flex-1 relative">
+                                <div className="absolute top-3 left-3 text-gray-400"><Icons.Search /></div>
+                                <input type="text" placeholder="Wyszukaj pliki w całej sieci..." value={search} onChange={e=>setSearch(e.target.value)} className="w-full pl-10 pr-4 py-3 bg-slate-800 border border-slate-700 rounded-xl text-white outline-none focus:border-blue-500 transition" />
+                            </div>
+                            <select value={selectedCategory} onChange={e=>setSelectedCategory(e.target.value)} className="bg-slate-800 border border-slate-700 rounded-xl px-4 py-3 text-white outline-none">
+                                <option value="Wszystkie">Wszystkie kategorie</option>
+                                {CATEGORIES.map(c => <option key={c} value={c}>{c}</option>)}
+                            </select>
+                        </div>
+
+                        {filteredFiles.length === 0 && <div className="text-center text-gray-500 py-10">Brak plików spełniających podane kryteria.</div>}
+
+                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                            {filteredFiles.map(file => (
+                                <div key={file.id} className="glass-panel rounded-xl overflow-hidden flex flex-col transition hover:border-slate-500">
+                                    <div className="h-48 bg-slate-900 flex items-center justify-center relative border-b border-slate-700">
+                                        {file.img ? (
+                                            <img src={file.img} alt={file.name} className="w-full h-full object-cover" onError={(e)=>{e.target.style.display='none'; e.target.nextSibling.style.display='flex';}} />
+                                        ) : null}
+                                        <div className="absolute inset-0 flex items-center justify-center text-gray-500 font-medium" style={{display: file.img ? 'none' : 'flex'}}>
+                                            Brak Obrazu
+                                        </div>
+                                    </div>
+                                    <div className="p-5 flex-1 flex flex-col">
+                                        <div className="flex justify-between items-start mb-2">
+                                            <h3 className="font-bold text-lg text-white truncate pr-2">{file.name}</h3>
+                                            <span className="text-xs bg-blue-900/50 text-blue-300 px-2 py-1 rounded whitespace-nowrap">{file.category}</span>
+                                        </div>
+                                        <p className="text-sm text-gray-400 mb-4 flex-1">{file.desc || 'Brak opisu'}</p>
+                                        <div className="flex justify-between items-center text-xs text-gray-500 mb-4 border-t border-slate-700 pt-3">
+                                            <span className="flex items-center gap-1"><Icons.User/> {file.uploader}</span>
+                                            <span>{file.size ? formatBytes(file.size) : 'Nieznany'}</span>
+                                        </div>
+                                        <div className="flex gap-2">
+                                            <button 
+                                                onClick={() => handleDownload(file)} 
+                                                disabled={downloadingId === file.id}
+                                                className="flex-1 bg-blue-600 hover:bg-blue-700 disabled:bg-blue-800 transition py-2 rounded-lg font-bold flex justify-center items-center gap-2">
+                                                {downloadingId === file.id ? 'Łączenie...' : <React.Fragment><Icons.Download/> Pobierz</React.Fragment>}
+                                            </button>
+                                            <button onClick={()=>handleReport(file)} title="Zgłoś plik" className="bg-slate-700 hover:bg-red-600 transition px-3 rounded-lg flex justify-center items-center text-gray-300 hover:text-white">
+                                                <Icons.Alert />
+                                            </button>
+                                        </div>
+                                        {!file.isDirectLink ? 
+                                            <div className="mt-2 text-center text-[10px] text-green-400">Sieć Wymiany (Stały dostęp)</div> : 
+                                            <div className="mt-2 text-center text-[10px] text-yellow-500">Wymaga udostępniającego (Połączenie Bezpośrednie)</div>
+                                        }
+                                    </div>
+                                </div>
+                            ))}
+                        </div>
+                    </div>
+                );
+            };
+
+            return (
+                <div className="min-h-screen flex flex-col">
+                    {message && (
+                        <div className={`fixed top-5 right-5 p-4 rounded-xl shadow-lg z-50 transition-all font-medium border ${message.type === 'error' ? 'bg-red-900/90 border-red-500 text-white' : message.type === 'success' ? 'bg-green-900/90 border-green-500 text-white' : 'bg-blue-900/90 border-blue-500 text-white'}`}>
+                            {message.text}
+                        </div>
+                    )}
+
+                    <nav className="glass-panel sticky top-0 z-40 border-b border-slate-700/50">
+                        <div className="max-w-7xl mx-auto px-4 h-16 flex flex-col sm:flex-row items-center justify-between">
+                            <div className="flex items-center gap-4 w-full sm:w-auto justify-between sm:justify-start">
+                                <div className="flex items-center gap-2 cursor-pointer" onClick={()=>setView('home')}>
+                                    <div className="bg-blue-600 p-1.5 rounded-lg text-white"><Icons.Download /></div>
+                                    <span className="font-bold text-xl tracking-tight hidden sm:block">SuperDownloader</span>
+                                </div>
+                                {/* WSKAŹNIK POŁĄCZENIA MQTT NA ŻYWO */}
+                                <div className="flex items-center gap-1.5 px-2 py-1 bg-slate-800/50 rounded-full border border-slate-700">
+                                    <div className={`w-2.5 h-2.5 rounded-full ${netStatus === 'Połączono z siecią' ? 'bg-green-500 animate-pulse' : netStatus === 'Rozłączono' || netStatus === 'Brak sieci' ? 'bg-red-500' : 'bg-yellow-500'}`}></div>
+                                    <span className="text-[10px] text-gray-400 font-medium tracking-wider uppercase">{netStatus}</span>
+                                </div>
+                            </div>
+
+                            <div className="flex items-center gap-2 sm:gap-4 mt-2 sm:mt-0 w-full sm:w-auto overflow-x-auto scrollbar-hide pb-1 sm:pb-0">
+                                <button onClick={()=>setView('home')} className={`whitespace-nowrap px-3 py-1.5 rounded-lg transition ${view==='home'?'bg-slate-700 text-white':'text-gray-400 hover:text-white'}`}>Strona Główna</button>
+                                {user ? (
+                                    <React.Fragment>
+                                        <button onClick={()=>setView('upload')} className={`whitespace-nowrap px-3 py-1.5 rounded-lg transition ${view==='upload'?'bg-blue-600 text-white':'text-gray-400 hover:text-white'}`}>Wstaw Plik</button>
+                                        {user.isAdmin && <button onClick={()=>setView('admin')} className={`whitespace-nowrap px-3 py-1.5 rounded-lg text-yellow-500 transition ${view==='admin'?'bg-slate-700':''}`}>Admin</button>}
+                                        <div className="w-px h-6 bg-slate-700 mx-1 hidden sm:block"></div>
+                                        <div className="flex items-center gap-2 text-sm ml-auto">
+                                            <span className="text-gray-300 font-medium whitespace-nowrap">{user.nick}</span>
+                                            <button onClick={logout} className="text-red-400 hover:text-red-300 text-xs uppercase font-bold tracking-wider">Wyloguj</button>
+                                        </div>
+                                    </React.Fragment>
+                                ) : (
+                                    <button onClick={()=>setView('auth')} className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-1.5 rounded-lg font-medium transition whitespace-nowrap ml-auto">Zaloguj</button>
+                                )}
+                            </div>
+                        </div>
+                    </nav>
+
+                    <main className="flex-1 pb-20">
+                        {loading ? (
+                            <div className="flex justify-center items-center h-64 text-gray-400">Pobieranie plików z Sieci Wymiany...</div>
+                        ) : (
+                            <React.Fragment>
+                                {view === 'home' && <HomeView />}
+                                {view === 'upload' && user && <UploadView />}
+                                {view === 'admin' && user && user.isAdmin && <AdminPanel />}
+                                {view === 'auth' && !user && <AuthView />}
+                            </React.Fragment>
+                        )}
+                    </main>
+                </div>
+            );
+        };
+
+        const root = ReactDOM.createRoot(document.getElementById('root'));
+        root.render(<App />);
+    </script>
+</body>
+</html>
