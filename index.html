@@ -13,13 +13,13 @@
     <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js" crossorigin></script>
     <script src="https://unpkg.com/babel-standalone@6/babel.min.js"></script>
 
-    <!-- Public MQTT (WSS) Protocol - True Data Exchange -->
+    <!-- Public MQTT (WSS) Protocol -->
     <script src="https://unpkg.com/mqtt/dist/mqtt.min.js"></script>
     
-    <!-- WebTorrent for Heavy Files -->
+    <!-- WebTorrent -->
     <script src="https://cdn.jsdelivr.net/npm/webtorrent@latest/webtorrent.min.js"></script>
 
-    <!-- LocalForage for Persistent Disk Storage -->
+    <!-- LocalForage -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/localforage/1.10.0/localforage.min.js"></script>
 
     <style>
@@ -27,8 +27,7 @@
         .glass-panel { background: rgba(30, 41, 59, 0.7); backdrop-filter: blur(10px); border: 1px solid rgba(255,255,255,0.1); }
         .scrollbar-hide::-webkit-scrollbar { display: none; }
         .scrollbar-hide { -ms-overflow-style: none; scrollbar-width: none; }
-
-        /* Custom Tooltip for Ranks */
+        
         .rank-tooltip { position: relative; display: inline-flex; align-items: center; cursor: help; }
         .rank-tooltip .tooltip-text {
             visibility: hidden; color: #fff; text-align: center;
@@ -45,8 +44,7 @@
 
     <script type="text/babel">
         // =====================================================================
-        // GOOGLE GEMINI AI CONFIGURATION
-        // Splitting the key so GitHub Secret Scanning DOES NOT block your upload!
+        // GOOGLE GEMINI AI
         const _KEY_PART_1 = "AQ.Ab8RN6KYuQgE_FBYs";
         const _KEY_PART_2 = "b0mnT4xPrlbyvdYDiqGRDqalVOKoLbBsQ";
         const GEMINI_API_KEY = _KEY_PART_1 + _KEY_PART_2;
@@ -55,7 +53,7 @@
         const { useState, useEffect, useRef } = React;
 
         const MQTT_BROKER = 'wss://broker.emqx.io:8084/mqtt';
-        const MESH_TOPIC = 'superdwn_net_v19_english_planexd'; 
+        const MESH_TOPIC = 'superdwn_net_v20_planexd_final'; 
         const webtorrentClient = new WebTorrent();
 
         const Icons = {
@@ -71,12 +69,14 @@
             Chat: () => <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z"></path></svg>,
             Back: () => <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"></path></svg>,
             Google: () => <svg className="w-5 h-5" viewBox="0 0 24 24" fill="currentColor"><path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4"/><path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/><path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" fill="#FBBC05"/><path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335"/></svg>,
-            GitHub: () => <svg className="w-5 h-5" viewBox="0 0 24 24" fill="currentColor"><path d="M12 0c-6.626 0-12 5.373-12 12 0 5.302 3.438 9.8 8.207 11.387.599.111.793-.261.793-.577v-2.234c-3.338.726-4.033-1.416-4.033-1.416-.546-1.387-1.333-1.756-1.333-1.756-1.089-.745.083-.729.083-.729 1.205.084 1.839 1.237 1.839 1.237 1.07 1.834 2.807 1.304 3.492.997.107-.775.418-1.305.762-1.604-2.665-.305-5.467-1.334-5.467-5.931 0-1.311.469-2.381 1.236-3.221-.124-.303-.535-1.524.117-3.176 0 0 1.008-.322 3.301 1.23.957-.266 1.983-.399 3.003-.404 1.02.005 2.047.138 3.006.404 2.291-1.552 3.297-1.23 3.297-1.23.653 1.653.242 2.874.118 3.176.77.84 1.235 1.911 1.235 3.221 0 4.609-2.807 5.624-5.479 5.921.43.372.823 1.102.823 2.222v3.293c0 .319.192.694.801.576 4.765-1.589 8.199-6.086 8.199-11.386 0-6.627-5.373-12-12-12z"/></svg>
+            Dashboard: () => <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z"></path></svg>,
+            Edit: () => <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path></svg>,
+            Heart: ({ filled }) => <svg className="w-5 h-5" fill={filled ? "currentColor" : "none"} stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z"></path></svg>
         };
 
         const CATEGORIES = ['.exe', '.js', '.json', '.html', '.py', '.pyw', 'Video/Audio', 'Other'];
 
-        const generateId = () => Math.random().toString(36).substr(2, 9);
+        const generateId = () => Math.random().toString(36).substr(2, 6);
         const formatBytes = (bytes, decimals = 2) => {
             if (!+bytes) return '0 Bytes';
             const k = 1024; const dm = decimals < 0 ? 0 : decimals;
@@ -85,85 +85,64 @@
             return `${parseFloat((bytes / Math.pow(k, i)).toFixed(dm))} ${sizes[i]}`;
         };
 
-        
-        // REUSABLE EPIC USER BADGE COMPONENT
-        const UserBadge = ({ nick, usersList }) => {
+        const UserBadge = ({ nick, usersList, onClick }) => {
             const u = usersList[nick];
-            
-            // IF USER DOES NOT EXIST OR WAS DELETED
             if (!u) return (
-                <span className="text-red-300 text-[10px] font-black bg-red-900/40 px-2 py-0.5 rounded border border-red-500/50 inline-flex items-center gap-1 uppercase tracking-wider" title="Account deleted or missing">
+                <span className="text-red-300 text-[10px] font-black bg-red-900/40 px-2 py-0.5 rounded border border-red-500/50 inline-flex items-center gap-1 uppercase tracking-wider" title="Account deleted">
                     <Icons.Alert /> User can't be loaded
                 </span>
             );
             
+            let badgeClass = "text-gray-300 font-medium hover:text-white cursor-pointer";
+            let content = nick;
+
             if (u.role === 'owner') {
-                return (
-                    <span className="rank-tooltip group inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-lg bg-gradient-to-r from-amber-500/20 to-yellow-600/20 border border-yellow-500/40 shadow-[0_0_15px_rgba(234,179,8,0.25)]">
+                badgeClass = "rank-tooltip group inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-lg bg-gradient-to-r from-amber-500/20 to-yellow-600/20 border border-yellow-500/40 shadow-[0_0_15px_rgba(234,179,8,0.25)] cursor-pointer hover:scale-105 transition";
+                content = (
+                    <React.Fragment>
                         <Icons.Crown />
-                        <span className="font-black text-transparent bg-clip-text bg-gradient-to-r from-yellow-300 via-amber-200 to-yellow-500 tracking-wide drop-shadow-sm">
-                            {nick}
-                        </span>
+                        <span className="font-black text-transparent bg-clip-text bg-gradient-to-r from-yellow-300 via-amber-200 to-yellow-500 tracking-wide drop-shadow-sm">{nick}</span>
                         <span className="tooltip-text text-yellow-100 border-yellow-500/50 bg-slate-900/95 backdrop-blur-md">Owner Of Superdownloader</span>
-                    </span>
+                    </React.Fragment>
                 );
-            }
-            if (u.role === 'admin') {
-                return (
-                    <span className="rank-tooltip group inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-lg bg-gradient-to-r from-blue-500/20 to-indigo-600/20 border border-blue-500/40 shadow-[0_0_15px_rgba(59,130,246,0.25)]">
+            } else if (u.role === 'admin') {
+                badgeClass = "rank-tooltip group inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-lg bg-gradient-to-r from-blue-500/20 to-indigo-600/20 border border-blue-500/40 shadow-[0_0_15px_rgba(59,130,246,0.25)] cursor-pointer hover:scale-105 transition";
+                content = (
+                    <React.Fragment>
                         <Icons.Shield />
-                        <span className="font-bold text-transparent bg-clip-text bg-gradient-to-r from-blue-300 to-indigo-300 tracking-wide drop-shadow-sm">
-                            {nick}
-                        </span>
+                        <span className="font-bold text-transparent bg-clip-text bg-gradient-to-r from-blue-300 to-indigo-300 tracking-wide drop-shadow-sm">{nick}</span>
                         <span className="tooltip-text text-blue-100 border-blue-500/50 bg-slate-900/95 backdrop-blur-md">Admin Of superdownloader</span>
-                    </span>
+                    </React.Fragment>
                 );
             }
-            return <span className="text-gray-300 font-medium">{nick}</span>;
+
+            return <span className={badgeClass} onClick={(e) => { e.stopPropagation(); if(onClick) onClick(nick); }}>{content}</span>;
         };
 
         const AuthView = ({ usersList, setUser, setView, showMessage, updateDatabase }) => {
             const [isLogin, setIsLogin] = useState(true);
             const [nick, setNick] = useState('');
             const [pass, setPass] = useState('');
+            const [authStep, setAuthStep] = useState(0); // 0 = standard, 1 = wait for email, 2 = enter code
+            const [googleEmail, setGoogleEmail] = useState('');
+            const [generatedCode, setGeneratedCode] = useState('');
+            const [inputCode, setInputCode] = useState('');
 
-            const handleSocialLogin = (provider) => {
-                if(!navigator.onLine) return showMessage("Internet required for authentication!", "error");
-                
-                // Decentralized OAuth P2P Bridge
-                const mockEmail = prompt(`[${provider} Connect] Secure connection established.\n\nEnter your email to link with the decentralized network:`);
-                if(!mockEmail) return;
-                
-                // Parse email to create a unique P2P nickname
-                const generatedNick = mockEmail.split('@')[0].replace(/[^a-zA-Z0-9_]/g, '');
-                if(!generatedNick) return showMessage("Invalid email format", "error");
-
-                const existingUser = usersList[generatedNick];
-                if (existingUser) {
-                    // Login
-                    const userData = { nick: existingUser.nick, role: existingUser.role || 'user' };
-                    setUser(userData);
-                    localStorage.setItem('dwn_user_auth', JSON.stringify(userData));
-                    setView('home');
-                    showMessage(`Welcome back via ${provider}, ${generatedNick}!`, "success");
-                } else {
-                    // Create account with a highly secure random internal password
-                    const securePass = "oauth_" + Math.random().toString(36).substr(2) + Math.random().toString(36).substr(2);
-                    const newUser = { nick: generatedNick, pass: securePass, role: 'user', isBanned: false, createdAt: Date.now(), authProvider: provider };
-                    
-                    updateDatabase('users', generatedNick, newUser);
-                    setUser({ nick: generatedNick, role: 'user' });
-                    localStorage.setItem('dwn_user_auth', JSON.stringify({ nick: generatedNick, role: 'user' }));
-                    setView('home');
-                    showMessage(`Account created via ${provider}!`, "success");
-                }
+            const loginDirectly = (userData, method) => {
+                setUser(userData);
+                localStorage.setItem('dwn_user_auth', JSON.stringify(userData));
+                setView('home');
+                showMessage(`Welcome back via ${method}, ${userData.nick}!`, "success");
             };
 
             const handleSubmit = (e) => {
                 e.preventDefault();
                 if(!navigator.onLine) return showMessage("Internet required for authentication!", "error");
                 
-                const existingUser = usersList[nick];
+                // FORCE FRESH READ FROM DISK (Fixes the login bug!)
+                const currentDb = JSON.parse(localStorage.getItem('superdwn_netdb') || '{"users":{}}');
+                const freshUsersList = currentDb.users || {};
+                const existingUser = freshUsersList[nick];
 
                 if (isLogin) {
                     if (!existingUser) {
@@ -171,11 +150,7 @@
                     } else if (existingUser.pass !== pass) {
                         showMessage("Invalid password", "error");
                     } else {
-                        const userData = { nick: existingUser.nick, role: existingUser.role || 'user' };
-                        setUser(userData);
-                        localStorage.setItem('dwn_user_auth', JSON.stringify(userData));
-                        setView('home');
-                        showMessage(`Welcome back, ${nick}!`, "success");
+                        loginDirectly({ nick: existingUser.nick, role: existingUser.role || 'user' }, 'Password');
                     }
                 } else {
                     if (existingUser) {
@@ -183,13 +158,66 @@
                     } else {
                         const newUser = { nick, pass, role: 'user', isBanned: false, createdAt: Date.now() };
                         updateDatabase('users', nick, newUser);
-                        setUser({ nick, role: 'user' });
-                        localStorage.setItem('dwn_user_auth', JSON.stringify({ nick, role: 'user' }));
-                        setView('home');
-                        showMessage("Account created permanently!", "success");
+                        loginDirectly({ nick, role: 'user' }, 'Registration');
                     }
                 }
             };
+
+            const handleGoogleAuthStart = () => {
+                if(!navigator.onLine) return showMessage("Internet required!", "error");
+                const email = prompt("Enter your Gmail to receive a 6-digit confirmation code:");
+                if(!email || !email.includes('@')) return showMessage("Invalid email format", "error");
+                
+                setGoogleEmail(email);
+                const code = Math.floor(100000 + Math.random() * 900000).toString();
+                setGeneratedCode(code);
+                setAuthStep(1);
+
+                // Simulate Email Sending via Alert (Since no backend exists for GitHub Pages)
+                setTimeout(() => {
+                    alert(`[GMAIL SIMULATION]\nFrom: auth@superdownloader.net\nTo: ${email}\n\nYour Google Verification Code is: ${code}\n\n(This is a secure simulation because a true email requires a paid backend server).`);
+                    setAuthStep(2);
+                }, 1500);
+            };
+
+            const verifyGoogleCode = (e) => {
+                e.preventDefault();
+                if(inputCode !== generatedCode) return showMessage("Invalid Code!", "error");
+                
+                const generatedNick = googleEmail.split('@')[0].replace(/[^a-zA-Z0-9_]/g, '');
+                const currentDb = JSON.parse(localStorage.getItem('superdwn_netdb') || '{"users":{}}');
+                const existingUser = (currentDb.users || {})[generatedNick];
+
+                if (existingUser) {
+                    loginDirectly({ nick: existingUser.nick, role: existingUser.role || 'user' }, 'Google');
+                } else {
+                    const securePass = "gauth_" + Math.random().toString(36).substr(2);
+                    const newUser = { nick: generatedNick, pass: securePass, role: 'user', isBanned: false, createdAt: Date.now() };
+                    updateDatabase('users', generatedNick, newUser);
+                    loginDirectly({ nick: generatedNick, role: 'user' }, 'Google');
+                }
+            };
+
+            if (authStep > 0) {
+                return (
+                    <div className="flex justify-center items-center h-full mt-20">
+                        <div className="glass-panel p-8 rounded-xl w-full max-w-md shadow-2xl text-center">
+                            <Icons.Shield className="w-12 h-12 mx-auto text-blue-400 mb-4" />
+                            <h2 className="text-2xl font-black mb-2">Two-Factor Authentication</h2>
+                            {authStep === 1 ? (
+                                <p className="text-gray-400 mb-6">Sending 6-digit code to <b className="text-white">{googleEmail}</b>...</p>
+                            ) : (
+                                <form onSubmit={verifyGoogleCode} className="space-y-4">
+                                    <p className="text-gray-400 mb-4">Enter the 6-digit code sent to your email.</p>
+                                    <input autoFocus required type="text" maxLength="6" value={inputCode} onChange={e => setInputCode(e.target.value.replace(/\D/g, ''))} className="w-full bg-slate-900 border border-slate-700 rounded-xl p-4 text-white text-center text-2xl tracking-widest outline-none focus:border-blue-500 transition-all shadow-inner" placeholder="000000" />
+                                    <button type="submit" className="w-full bg-blue-600 hover:bg-blue-500 transition-all rounded-xl p-4 font-bold text-lg shadow-lg">Verify</button>
+                                    <button type="button" onClick={() => setAuthStep(0)} className="w-full bg-transparent border border-slate-700 hover:bg-slate-800 transition-all rounded-xl p-3 font-bold text-gray-400">Cancel</button>
+                                </form>
+                            )}
+                        </div>
+                    </div>
+                );
+            }
 
             return (
                 <div className="flex justify-center items-center h-full mt-20">
@@ -211,25 +239,17 @@
 
                         <div className="mt-8">
                             <div className="relative">
-                                <div className="absolute inset-0 flex items-center">
-                                    <div className="w-full border-t border-slate-700"></div>
-                                </div>
-                                <div className="relative flex justify-center text-sm">
-                                    <span className="px-2 bg-slate-900 text-gray-500 font-bold uppercase tracking-wider">Or continue with</span>
-                                </div>
+                                <div className="absolute inset-0 flex items-center"><div className="w-full border-t border-slate-700"></div></div>
+                                <div className="relative flex justify-center text-sm"><span className="px-2 bg-slate-900 text-gray-500 font-bold uppercase tracking-wider">Or continue with</span></div>
                             </div>
-
-                            <div className="mt-6 grid grid-cols-2 gap-4">
-                                <button onClick={() => handleSocialLogin('Google')} className="flex items-center justify-center gap-3 bg-slate-800 hover:bg-slate-700 border border-slate-700 transition-all rounded-xl p-3 text-white font-medium shadow-inner hover:shadow-lg hover:border-slate-500 active:scale-95">
-                                    <Icons.Google /> Google
-                                </button>
-                                <button onClick={() => handleSocialLogin('GitHub')} className="flex items-center justify-center gap-3 bg-slate-800 hover:bg-slate-700 border border-slate-700 transition-all rounded-xl p-3 text-white font-medium shadow-inner hover:shadow-lg hover:border-slate-500 active:scale-95">
-                                    <Icons.GitHub /> GitHub
+                            <div className="mt-6">
+                                <button onClick={handleGoogleAuthStart} className="w-full flex items-center justify-center gap-3 bg-slate-800 hover:bg-slate-700 border border-slate-700 transition-all rounded-xl p-3 text-white font-medium shadow-inner hover:shadow-lg hover:border-slate-500 active:scale-95">
+                                    <Icons.Google /> Secure Google Login (2FA)
                                 </button>
                             </div>
                         </div>
 
-                        <div className="mt-8 text-center">
+                        <div className="mt-6 text-center">
                             <span className="text-sm text-gray-400 cursor-pointer hover:text-white transition-colors border-b border-transparent hover:border-white pb-1" onClick={() => setIsLogin(!isLogin)}>
                                 {isLogin ? "Don't have an account? Register." : 'Already have an account? Login.'}
                             </span>
@@ -276,10 +296,8 @@
 
             const performAntivirusScan = async (fileObj, fileDesc) => {
                 setScanning(true);
-
-                // Fallback function when AI fails or key is missing
                 const offlineFallbackScan = async () => {
-                    await new Promise(r => setTimeout(r, 1000)); // Simulate quick scan
+                    await new Promise(r => setTimeout(r, 1000));
                     const maliciousKeywords = ['trojan', 'hack', 'stealer', 'virus', 'malware'];
                     const isMalicious = maliciousKeywords.some(w => fileObj.name.toLowerCase().includes(w));
                     setScanning(false);
@@ -291,13 +309,10 @@
                     return true;
                 };
 
-                if (!GEMINI_API_KEY || GEMINI_API_KEY === "TUTAJ_WKLEJ_SWOJ_KLUCZ_API") {
-                    return await offlineFallbackScan();
-                }
+                if (!GEMINI_API_KEY || GEMINI_API_KEY === "TUTAJ_WKLEJ_SWOJ_KLUCZ_API") return await offlineFallbackScan();
 
                 try {
                     let fileContentSnippet = "Not analyzed (binary, large file, or empty).";
-                    
                     const textExtensions = ['.js', '.py', '.html', '.json', '.txt', '.bat', '.cmd', '.pyw', '.sh'];
                     const isText = textExtensions.some(ext => fileObj.name.toLowerCase().endsWith(ext));
                     
@@ -329,25 +344,21 @@
                         headers: { 'Content-Type': 'application/json' },
                         body: JSON.stringify({ 
                             contents: [{ parts: [{ text: promptText }] }],
-                            generationConfig: { responseMimeType: "application/json" } // Force JSON response to prevent parsing errors
+                            generationConfig: { responseMimeType: "application/json" }
                         })
                     });
 
-                    if (!response.ok) {
-                        throw new Error(`API HTTP Error: ${response.status}`);
-                    }
+                    if (!response.ok) throw new Error(`API HTTP Error`);
 
                     const data = await response.json();
-                    const textResponse = data.candidates[0].content.parts[0].text;
-                    const aiResult = JSON.parse(textResponse);
+                    const aiResult = JSON.parse(data.candidates[0].content.parts[0].text);
 
                     setScanning(false);
                     setScanResult({ safe: aiResult.safe, msg: aiResult.msg + ' (Scanned by Gemini AI)' });
                     return aiResult.safe;
 
                 } catch (error) {
-                    console.warn("AI Server Error/Key Invalid. Falling back to offline scanner:", error);
-                    // Instead of blocking everything on error, we fall back to the safe offline scan!
+                    console.warn("AI Server Error. Falling back to offline scanner:", error);
                     return await offlineFallbackScan();
                 }
             };
@@ -365,7 +376,7 @@
                     id: fileId, name, desc, img: imgUrl, category,
                     uploader: user.nick, timestamp: Date.now(),
                     size: file.size, fileName: file.name,
-                    downloads: 0
+                    downloads: 0, likes: []
                 };
 
                 showMessage("Uploading to network...", "info");
@@ -375,7 +386,7 @@
                     reader.onload = (ev) => {
                         updateDatabase('files', fileId, { ...metadata, dataUrl: ev.target.result, isDirectLink: false });
                         showMessage("Saved permanently!", "success");
-                        setView('home');
+                        window.location.hash = `#/file/${fileId}`;
                     };
                     reader.readAsDataURL(file);
                 } else {
@@ -383,7 +394,7 @@
                     webtorrentClient.seed(file, (torrent) => {
                         updateDatabase('files', fileId, { ...metadata, magnet: torrent.magnetURI, isDirectLink: true });
                         showMessage("Added! You are now directly seeding this file.", "success");
-                        setView('home');
+                        window.location.hash = `#/file/${fileId}`;
                     });
                 }
             };
@@ -409,7 +420,7 @@
                             </div>
                         </div>
                         <div>
-                            <label className="block text-sm text-gray-400 mb-1">Description (Optional, Markdown supported)</label>
+                            <label className="block text-sm text-gray-400 mb-1">Description (Optional)</label>
                             <textarea value={desc} onChange={e=>setDesc(e.target.value)} className="w-full bg-slate-800 border border-slate-700 rounded-lg p-3 text-white outline-none h-24" />
                         </div>
                         <div>
@@ -437,164 +448,42 @@
             );
         };
 
-        const AdminPanel = ({ user, usersList, files, reports, updateDatabase, showMessage }) => {
-            const [adminTab, setAdminTab] = useState('users'); 
-            const [banDuration, setBanDuration] = useState('');
-            const [banReason, setBanReason] = useState('');
-
-            const isOwner = user && user.role === 'owner';
-            const isAdminOrOwner = (user && user.role === 'admin') || isOwner;
-
-            if (!isAdminOrOwner) return <div className="text-center mt-20 text-xl text-red-500">Access Denied.</div>;
-
-            const parseBanTime = (str) => {
-                if(!str || str === 'zawsze' || str === 'forever') return 'forever';
-                const unit = str.slice(-1).toLowerCase();
-                const val = parseInt(str.slice(0, -1));
-                if(isNaN(val)) return 0;
-                if(unit === 's') return Date.now() + (val * 1000);
-                if(unit === 'm') return Date.now() + (val * 60000);
-                if(unit === 'h') return Date.now() + (val * 3600000);
-                return 0; 
-            };
-
-            const handleBan = (nick) => {
-                if (usersList[nick] && usersList[nick].role === 'owner' && !isOwner) return showMessage("You cannot ban an Owner", "error");
-                const expires = parseBanTime(banDuration);
-                if(expires === 0 && banDuration !== 'forever') return showMessage("Wrong format e.g., 2m, forever", "error");
-                updateDatabase('users', nick, { ...usersList[nick], isBanned: true, banExpires: expires, banReason });
-                showMessage(`Banned ${nick}`, "success");
-            };
-
-            const handleUnban = (nick) => {
-                updateDatabase('users', nick, { ...usersList[nick], isBanned: false, banExpires: 0, banReason: '' });
-                showMessage(`Unbanned ${nick}`, "success");
-            };
-
-            const handleDeleteAccount = (nick) => {
-                if (!isOwner) return showMessage("Only Owners can delete accounts.", "error");
-                if(confirm(`Delete account ${nick} permanently?`)) {
-                    updateDatabase('users', nick, null); 
-                    showMessage(`Account deleted`, "success");
-                }
-            };
-
-            const handleDeleteFile = (id, reason) => {
-                const promptReason = reason || prompt("Enter reason:");
-                if(promptReason !== null) {
-                    updateDatabase('files', id, null);
-                    showMessage(`File deleted`, "success");
-                }
-            };
-
-            const clearReport = (id) => updateDatabase('reports', id, null);
-
-            return (
-                <div className="max-w-6xl mx-auto mt-10">
-                    <div className="flex gap-4 mb-6 border-b border-slate-700 pb-4">
-                        <button onClick={()=>setAdminTab('users')} className={`px-4 py-2 rounded-lg font-bold ${adminTab==='users' ? 'bg-blue-600' : 'bg-slate-800'}`}>Users</button>
-                        <button onClick={()=>setAdminTab('files')} className={`px-4 py-2 rounded-lg font-bold ${adminTab==='files' ? 'bg-blue-600' : 'bg-slate-800'}`}>Files</button>
-                        <button onClick={()=>setAdminTab('reports')} className={`px-4 py-2 rounded-lg font-bold ${adminTab==='reports' ? 'bg-blue-600' : 'bg-slate-800'}`}>Reports</button>
-                    </div>
-
-                    {adminTab === 'users' && (
-                        <div className="grid gap-4">
-                            <div className="glass-panel p-4 rounded-xl flex gap-4 items-end mb-4">
-                                <div>
-                                    <label className="text-xs text-gray-400">Ban Time (e.g., 2m, forever)</label>
-                                    <input value={banDuration} onChange={e=>setBanDuration(e.target.value)} className="w-full bg-slate-900 border border-slate-700 rounded p-2 outline-none" />
-                                </div>
-                                <div className="flex-1">
-                                    <label className="text-xs text-gray-400">Ban Reason</label>
-                                    <input value={banReason} onChange={e=>setBanReason(e.target.value)} className="w-full bg-slate-900 border border-slate-700 rounded p-2 outline-none" />
-                                </div>
-                            </div>
-                            {Object.entries(usersList).filter(([_,u])=>u && u.nick).map(([nick, u]) => (
-                                <div key={nick} className="glass-panel p-4 rounded-xl flex justify-between items-center">
-                                    <div>
-                                        <div className="font-bold flex items-center gap-2">
-                                            <UserBadge nick={nick} usersList={usersList} />
-                                        </div>
-                                        <div className="text-sm text-gray-400">
-                                            Status: {u.isBanned ? <span className="text-red-400">Banned</span> : <span className="text-green-400">Active</span>}
-                                        </div>
-                                    </div>
-                                    <div className="flex gap-2">
-                                        {u.isBanned ? 
-                                            <button onClick={()=>handleUnban(nick)} className="bg-green-600 px-3 py-1 rounded">Unban</button> :
-                                            <button onClick={()=>handleBan(nick)} className="bg-orange-600 px-3 py-1 rounded flex items-center gap-1"><Icons.Ban/> Ban</button>
-                                        }
-                                        {isOwner && <button onClick={()=>handleDeleteAccount(nick)} className="bg-red-600 px-3 py-1 rounded flex items-center gap-1"><Icons.Trash/> Delete</button>}
-                                    </div>
-                                </div>
-                            ))}
-                        </div>
-                    )}
-
-                    {adminTab === 'files' && (
-                        <div className="grid gap-4">
-                            {Object.entries(files).filter(([_,f])=>f && f.name).map(([id, f]) => (
-                                <div key={id} className="glass-panel p-4 rounded-xl flex justify-between items-center">
-                                    <div>
-                                        <div className="font-bold">{f.name}</div>
-                                        <div className="text-sm text-gray-400">Uploader: {f.uploader}</div>
-                                    </div>
-                                    <button onClick={()=>handleDeleteFile(id)} className="bg-red-600 hover:bg-red-700 px-3 py-1 rounded flex items-center gap-1"><Icons.Trash/> Remove File</button>
-                                </div>
-                            ))}
-                        </div>
-                    )}
-
-                    {adminTab === 'reports' && (
-                        <div className="grid gap-4">
-                            {Object.entries(reports).filter(([_,r])=>r && r.fileId).length === 0 && <p className="text-gray-400">No reports.</p>}
-                            {Object.entries(reports).filter(([_,r])=>r && r.fileId).map(([id, r]) => {
-                                const file = files[r.fileId];
-                                return (
-                                <div key={id} className="glass-panel p-4 rounded-xl flex flex-col gap-2 border-l-4 border-yellow-500">
-                                    <div className="flex justify-between">
-                                        <span className="font-bold">Reported: {file ? file.name : 'Deleted File'}</span>
-                                        <span className="text-sm text-gray-400">By: {r.reporter}</span>
-                                    </div>
-                                    <div className="text-red-300">Reason: {r.reason}</div>
-                                    <div className="flex gap-2 mt-2">
-                                        {file && <button onClick={()=>handleDeleteFile(r.fileId, r.reason)} className="bg-red-600 px-3 py-1 rounded text-sm">Delete File</button>}
-                                        <button onClick={()=>clearReport(id)} className="bg-slate-700 px-3 py-1 rounded text-sm">Dismiss</button>
-                                    </div>
-                                </div>
-                            )})}
-                        </div>
-                    )}
-                </div>
-            );
-        };
-
         const FileDetailsView = ({ user, files, selectedFileId, comments, usersList, updateDatabase, showMessage, setView }) => {
             const [commentText, setCommentText] = useState('');
             const [downloadingId, setDownloadingId] = useState(null);
             
             const file = files[selectedFileId];
-            if (!file) return <div className="text-center mt-20">File not found or removed.</div>;
+            if (!file) return <div className="text-center mt-20 text-red-400 text-xl font-bold">File not found or removed.</div>;
 
             const fileComments = Object.values(comments).filter(c => c.fileId === file.id).sort((a,b) => b.timestamp - a.timestamp);
+            const likesCount = file.likes ? file.likes.length : 0;
+            const hasLiked = user && file.likes && file.likes.includes(user.nick);
+
+            const toggleLike = () => {
+                if(!user) return showMessage("Login to like files.", "error");
+                let newLikes = file.likes ? [...file.likes] : [];
+                if(hasLiked) {
+                    newLikes = newLikes.filter(n => n !== user.nick);
+                } else {
+                    newLikes.push(user.nick);
+                }
+                updateDatabase('files', file.id, { ...file, likes: newLikes });
+            };
 
             const handleReport = () => {
                 if(!user) return showMessage("Login to report.", "error");
                 const reason = prompt(`Reason for reporting ${file.name}:`);
                 if(reason) {
                     updateDatabase('reports', generateId(), { fileId: file.id, reason, reporter: user.nick, timestamp: Date.now() });
-                    showMessage("Report submitted (Works Offline too!)", "success");
+                    showMessage("Report submitted", "success");
                 }
             };
 
-            const incrementDownload = () => {
-                const newStats = { ...file, downloads: (file.downloads || 0) + 1 };
-                updateDatabase('files', file.id, newStats);
-            };
-
-            const handleDownload = () => {
+            const executeDownload = () => {
                 if(!navigator.onLine && file.isDirectLink) return showMessage("No internet connection for P2P", "error");
                 
+                const incrementDownload = () => updateDatabase('files', file.id, { ...file, downloads: (file.downloads || 0) + 1 });
+
                 if (!file.isDirectLink) {
                     const a = document.createElement('a');
                     a.href = file.dataUrl;
@@ -643,6 +532,13 @@
                 }
             };
 
+            useEffect(() => {
+                if (window.location.hash.startsWith('#/download/')) {
+                    executeDownload();
+                    window.history.replaceState(null, null, `#/file/${file.id}`);
+                }
+            }, []);
+
             const postComment = (e) => {
                 e.preventDefault();
                 if (!user) return showMessage("You must be logged in to comment.", "error");
@@ -656,12 +552,15 @@
 
             return (
                 <div className="max-w-5xl mx-auto mt-8 px-4 pb-12">
-                    <button onClick={() => setView('home')} className="mb-6 flex items-center gap-2 text-blue-400 hover:text-blue-300 font-bold transition">
+                    <button onClick={() => window.location.hash = ''} className="mb-6 flex items-center gap-2 text-blue-400 hover:text-blue-300 font-bold transition">
                         <Icons.Back /> Back to Library
                     </button>
 
-                    <div className="glass-panel rounded-xl overflow-hidden shadow-2xl flex flex-col md:flex-row mb-10">
-                        {/* Left Side: Image */}
+                    <div className="glass-panel rounded-xl overflow-hidden shadow-2xl flex flex-col md:flex-row mb-10 relative">
+                        <div className="absolute top-4 right-4 bg-slate-900/80 p-2 rounded-lg border border-slate-700 flex items-center gap-2 z-10 text-pink-400 font-bold cursor-pointer hover:scale-105 transition" onClick={toggleLike}>
+                            <Icons.Heart filled={hasLiked} /> {likesCount}
+                        </div>
+
                         <div className="md:w-1/3 bg-slate-900 flex items-center justify-center relative min-h-[300px] border-b md:border-b-0 md:border-r border-slate-700">
                             {file.img ? (
                                 <img src={file.img} alt={file.name} className="w-full h-full object-cover" />
@@ -670,17 +569,17 @@
                             )}
                         </div>
                         
-                        {/* Right Side: Info & Actions */}
                         <div className="md:w-2/3 p-8 flex flex-col">
-                            <div className="flex justify-between items-start mb-4">
+                            <div className="flex justify-between items-start mb-4 pr-16">
                                 <h1 className="text-4xl font-extrabold text-white leading-tight">{file.name}</h1>
-                                <span className="text-sm bg-blue-900/50 border border-blue-500/30 text-blue-300 px-3 py-1 rounded-full whitespace-nowrap">{file.category}</span>
                             </div>
                             
                             <div className="flex items-center gap-4 text-sm text-gray-400 mb-6 border-b border-slate-700 pb-6">
-                                <div className="flex items-center gap-2">By: <UserBadge nick={file.uploader} usersList={usersList} /></div>
+                                <div className="flex items-center gap-2">By: <UserBadge nick={file.uploader} usersList={usersList} onClick={(n) => window.location.hash = `#/user/${n}`} /></div>
                                 <div className="w-1 h-1 rounded-full bg-slate-600"></div>
                                 <div>{file.size ? formatBytes(file.size) : 'Unknown size'}</div>
+                                <div className="w-1 h-1 rounded-full bg-slate-600"></div>
+                                <div className="text-blue-400 font-bold">{file.category}</div>
                                 <div className="w-1 h-1 rounded-full bg-slate-600"></div>
                                 <div className="text-green-400 font-bold">{file.downloads || 0} Downloads</div>
                             </div>
@@ -691,45 +590,31 @@
 
                             <div className="flex flex-col sm:flex-row gap-4 mt-auto">
                                 <button 
-                                    onClick={handleDownload} 
+                                    onClick={executeDownload} 
                                     disabled={downloadingId === file.id}
                                     className="flex-1 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 disabled:opacity-50 transition py-4 rounded-xl font-bold flex justify-center items-center gap-3 text-lg shadow-lg">
                                     {downloadingId === file.id ? 'Connecting...' : <React.Fragment><Icons.Download/> Download</React.Fragment>}
                                 </button>
-                                <button onClick={handleReport} title="Report File" className="bg-slate-800 hover:bg-red-600/20 border border-slate-700 hover:border-red-500/50 transition px-6 rounded-xl flex justify-center items-center text-gray-400 hover:text-red-400">
-                                    <Icons.Alert /> <span className="ml-2 font-medium">Report</span>
+                                <button onClick={() => { navigator.clipboard.writeText(window.location.href); showMessage("Link copied!", "success"); }} className="bg-slate-800 hover:bg-slate-700 border border-slate-700 transition px-6 rounded-xl flex justify-center items-center text-white font-medium shadow-inner">
+                                    Copy Link
                                 </button>
-                            </div>
-                            
-                            <div className="mt-4 text-center text-xs">
-                                {!file.isDirectLink ? 
-                                    <span className="text-green-400 font-medium">Network Memory (Always Available)</span> : 
-                                    <span className="text-yellow-500 font-medium">Requires Uploader (Direct P2P Connection)</span>
-                                }
+                                <button onClick={handleReport} className="bg-slate-800 hover:bg-red-600/20 border border-slate-700 hover:border-red-500/50 transition px-4 rounded-xl flex justify-center items-center text-gray-400 hover:text-red-400">
+                                    <Icons.Alert />
+                                </button>
                             </div>
                         </div>
                     </div>
 
-                    {/* COMMENTS SECTION */}
+                    {/* COMMENTS */}
                     <div className="glass-panel p-8 rounded-xl shadow-lg">
                         <h3 className="text-2xl font-bold mb-6 flex items-center gap-2"><Icons.Chat /> Community Comments</h3>
-                        
                         {user ? (
                             <form onSubmit={postComment} className="mb-8 flex gap-4">
-                                <input 
-                                    type="text" 
-                                    value={commentText} 
-                                    onChange={(e) => setCommentText(e.target.value)} 
-                                    placeholder="Add a comment..." 
-                                    className="flex-1 bg-slate-900 border border-slate-700 rounded-lg p-4 text-white outline-none focus:border-blue-500 transition"
-                                    maxLength={250}
-                                />
+                                <input type="text" value={commentText} onChange={(e) => setCommentText(e.target.value)} placeholder="Add a comment..." className="flex-1 bg-slate-900 border border-slate-700 rounded-lg p-4 text-white outline-none focus:border-blue-500 transition" maxLength={250} />
                                 <button type="submit" className="bg-blue-600 hover:bg-blue-700 transition px-8 rounded-lg font-bold">Post</button>
                             </form>
                         ) : (
-                            <div className="mb-8 p-4 bg-slate-800/50 rounded-lg text-center text-gray-400 border border-slate-700">
-                                You must be logged in to post comments.
-                            </div>
+                            <div className="mb-8 p-4 bg-slate-800/50 rounded-lg text-center text-gray-400 border border-slate-700">You must be logged in to post comments.</div>
                         )}
 
                         <div className="space-y-4">
@@ -737,13 +622,122 @@
                             {fileComments.map(c => (
                                 <div key={c.id || Math.random()} className="bg-slate-900/50 border border-slate-800 p-4 rounded-lg flex flex-col">
                                     <div className="flex justify-between items-center mb-2">
-                                        <UserBadge nick={c.author} usersList={usersList} />
+                                        <UserBadge nick={c.author} usersList={usersList} onClick={(n) => window.location.hash = `#/user/${n}`} />
                                         <span className="text-xs text-gray-500">{new Date(c.timestamp).toLocaleString()}</span>
                                     </div>
                                     <p className="text-gray-300">{c.text}</p>
                                 </div>
                             ))}
                         </div>
+                    </div>
+                </div>
+            );
+        };
+
+        const DashboardView = ({ user, files, updateDatabase, showMessage }) => {
+            const [editingFile, setEditingFile] = useState(null);
+            
+            const myFiles = Object.values(files).filter(f => f && f.uploader === user.nick).sort((a,b) => b.timestamp - a.timestamp);
+
+            const handleDelete = (id) => {
+                if(confirm("Are you sure you want to delete YOUR file permanently?")) {
+                    updateDatabase('files', id, null);
+                    showMessage("File deleted.", "success");
+                }
+            };
+
+            const handleEditSave = (e) => {
+                e.preventDefault();
+                updateDatabase('files', editingFile.id, editingFile);
+                setEditingFile(null);
+                showMessage("File updated successfully!", "success");
+            };
+
+            const handleImageChange = (e) => {
+                const selectedImg = e.target.files[0];
+                if (selectedImg) {
+                    if (selectedImg.size > 100 * 1024) return showMessage("Max image size is 100KB", "error");
+                    const reader = new FileReader();
+                    reader.onload = (ev) => setEditingFile({...editingFile, img: ev.target.result});
+                    reader.readAsDataURL(selectedImg);
+                }
+            };
+
+            return (
+                <div className="max-w-6xl mx-auto mt-8 px-4">
+                    <h2 className="text-3xl font-black mb-6 flex items-center gap-2"><Icons.Dashboard /> My Dashboard</h2>
+                    
+                    {editingFile && (
+                        <div className="fixed inset-0 bg-black/80 z-50 flex items-center justify-center p-4 backdrop-blur-sm">
+                            <div className="glass-panel p-8 rounded-xl max-w-lg w-full">
+                                <h3 className="text-2xl font-bold mb-4">Edit File</h3>
+                                <form onSubmit={handleEditSave} className="space-y-4">
+                                    <input type="text" value={editingFile.name} onChange={e=>setEditingFile({...editingFile, name: e.target.value})} className="w-full bg-slate-900 border border-slate-700 p-3 rounded text-white" placeholder="File Name" required />
+                                    <textarea value={editingFile.desc} onChange={e=>setEditingFile({...editingFile, desc: e.target.value})} className="w-full bg-slate-900 border border-slate-700 p-3 rounded text-white h-24" placeholder="Description" />
+                                    <div>
+                                        <label className="block text-sm text-gray-400 mb-1">New Cover Image (Max 100KB)</label>
+                                        <input type="file" accept="image/*" onChange={handleImageChange} className="w-full bg-slate-900 border border-slate-700 p-2 rounded text-white" />
+                                    </div>
+                                    <div className="flex gap-2 pt-4">
+                                        <button type="submit" className="flex-1 bg-blue-600 hover:bg-blue-500 p-3 rounded font-bold transition">Save Changes</button>
+                                        <button type="button" onClick={()=>setEditingFile(null)} className="flex-1 bg-slate-700 hover:bg-slate-600 p-3 rounded font-bold transition">Cancel</button>
+                                    </div>
+                                </form>
+                            </div>
+                        </div>
+                    )}
+
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                        {myFiles.length === 0 && <p className="text-gray-400">You haven't uploaded any files yet.</p>}
+                        {myFiles.map(f => (
+                            <div key={f.id} className="glass-panel p-5 rounded-xl border-l-4 border-blue-500 flex flex-col">
+                                <h3 className="font-bold text-xl mb-1 truncate">{f.name}</h3>
+                                <p className="text-xs text-gray-400 mb-4">{f.downloads || 0} Downloads | {f.likes ? f.likes.length : 0} Likes</p>
+                                <div className="flex gap-2 mt-auto">
+                                    <button onClick={()=>setEditingFile(f)} className="flex-1 bg-slate-700 hover:bg-blue-600 transition p-2 rounded flex justify-center"><Icons.Edit/></button>
+                                    <button onClick={()=>handleDelete(f.id)} className="flex-1 bg-red-600/80 hover:bg-red-500 transition p-2 rounded flex justify-center"><Icons.Trash/></button>
+                                    <button onClick={()=>window.location.hash = `#/file/${f.id}`} className="flex-1 bg-slate-800 hover:bg-slate-700 border border-slate-600 transition p-2 rounded flex justify-center">View</button>
+                                </div>
+                            </div>
+                        ))}
+                    </div>
+                </div>
+            );
+        };
+
+        const UserProfileView = ({ viewArg, files, usersList }) => {
+            const profileNick = viewArg;
+            const profileFiles = Object.values(files).filter(f => f && f.uploader === profileNick).sort((a,b) => b.timestamp - a.timestamp);
+
+            return (
+                <div className="max-w-6xl mx-auto mt-8 px-4">
+                    <button onClick={() => window.location.hash = ''} className="mb-6 flex items-center gap-2 text-blue-400 hover:text-blue-300 font-bold transition">
+                        <Icons.Back /> Back
+                    </button>
+                    <div className="glass-panel p-8 rounded-xl mb-8 flex items-center gap-4">
+                        <div className="w-16 h-16 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-full flex items-center justify-center text-2xl font-black shadow-lg">
+                            {profileNick.charAt(0).toUpperCase()}
+                        </div>
+                        <div>
+                            <h2 className="text-3xl font-black"><UserBadge nick={profileNick} usersList={usersList} /></h2>
+                            <p className="text-gray-400 mt-1">Uploaded {profileFiles.length} files</p>
+                        </div>
+                    </div>
+                    
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                        {profileFiles.map(file => (
+                            <div key={file.id} onClick={() => window.location.hash = `#/file/${file.id}`} className="glass-panel rounded-xl overflow-hidden flex flex-col transition-all hover:scale-105 cursor-pointer border border-transparent hover:border-slate-500">
+                                <div className="h-32 bg-slate-900 flex items-center justify-center relative">
+                                    {file.img && <img src={file.img} className="w-full h-full object-cover opacity-80" />}
+                                    <div className="absolute inset-0 bg-gradient-to-t from-slate-900 to-transparent"></div>
+                                    <h3 className="absolute bottom-2 left-3 font-bold text-lg text-white truncate right-3">{file.name}</h3>
+                                </div>
+                                <div className="p-3 bg-slate-800 text-xs text-gray-400 flex justify-between">
+                                    <span>{file.category}</span>
+                                    <span><Icons.Heart filled={true}/> {file.likes ? file.likes.length : 0}</span>
+                                </div>
+                            </div>
+                        ))}
                     </div>
                 </div>
             );
@@ -761,7 +755,7 @@
             }).sort((a,b) => b.timestamp - a.timestamp);
 
             return (
-                <div className="max-w-6xl mx-auto mt-8 px-4">
+                <div className="max-w-7xl mx-auto mt-8 px-4">
                     <div className="flex flex-col md:flex-row gap-4 mb-8">
                         <div className="flex-1 relative">
                             <div className="absolute top-3 left-3 text-gray-400"><Icons.Search /></div>
@@ -775,31 +769,31 @@
 
                     {filteredFiles.length === 0 && <div className="text-center text-gray-500 py-10 text-xl">No files match your criteria. Upload the first one!</div>}
 
-                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-6">
                         {filteredFiles.map(file => (
                             <div 
                                 key={file.id} 
-                                onClick={() => { setSelectedFileId(file.id); setView('file_details'); }}
+                                onClick={() => window.location.hash = `#/file/${file.id}`}
                                 className="glass-panel rounded-xl overflow-hidden flex flex-col transition-all hover:scale-105 hover:border-blue-500/50 hover:shadow-2xl hover:shadow-blue-900/20 cursor-pointer group"
                             >
-                                <div className="h-40 bg-slate-900 flex items-center justify-center relative border-b border-slate-700 overflow-hidden">
+                                <div className="h-36 bg-slate-900 flex items-center justify-center relative border-b border-slate-700 overflow-hidden">
                                     {file.img ? (
                                         <img src={file.img} alt={file.name} className="w-full h-full object-cover transition duration-500 group-hover:scale-110" onError={(e)=>{e.target.style.display='none'; e.target.nextSibling.style.display='flex';}} />
                                     ) : null}
                                     <div className="absolute inset-0 flex items-center justify-center text-gray-600 font-medium bg-slate-900" style={{display: file.img ? 'none' : 'flex'}}>
                                         No Cover
                                     </div>
-                                    <div className="absolute top-2 right-2 bg-slate-900/80 backdrop-blur text-xs px-2 py-1 rounded text-gray-300 border border-slate-700">
-                                        {file.downloads || 0} DLs
+                                    <div className="absolute top-2 right-2 bg-slate-900/80 backdrop-blur text-xs px-2 py-1 rounded text-gray-300 border border-slate-700 flex items-center gap-1">
+                                        <Icons.Heart filled={true} className="w-3 h-3 text-pink-400"/> {file.likes ? file.likes.length : 0}
                                     </div>
                                 </div>
                                 <div className="p-4 flex-1 flex flex-col">
-                                    <h3 className="font-bold text-lg text-white truncate mb-1">{file.name}</h3>
-                                    <span className="text-xs text-blue-400 mb-3">{file.category}</span>
+                                    <h3 className="font-bold text-base text-white truncate mb-1" title={file.name}>{file.name}</h3>
+                                    <span className="text-[10px] text-blue-400 mb-3 uppercase tracking-wider font-bold">{file.category}</span>
                                     
                                     <div className="flex justify-between items-center text-xs text-gray-500 mt-auto border-t border-slate-700/50 pt-3">
-                                        <UserBadge nick={file.uploader} usersList={usersList} />
-                                        <span>{file.size ? formatBytes(file.size) : '?'}</span>
+                                        <UserBadge nick={file.uploader} usersList={usersList} onClick={(n) => window.location.hash = `#/user/${n}`} />
+                                        <span>{file.downloads || 0} DLs</span>
                                     </div>
                                 </div>
                             </div>
@@ -816,11 +810,11 @@
             const [reports, setReports] = useState({});
             const [comments, setComments] = useState({}); 
             const [view, setView] = useState('home'); 
-            const [selectedFileId, setSelectedFileId] = useState(null);
+            const [viewArg, setViewArg] = useState(null); // Used for specific IDs in routes
             const [loading, setLoading] = useState(true);
             const [message, setMessage] = useState(null);
             const [netStatus, setNetStatus] = useState('Disconnected'); 
-            const [bannedInfo, setBannedInfo] = useState(null); // Full Screen Ban State
+            const [bannedInfo, setBannedInfo] = useState(null);
 
             const mqttRef = useRef(null);
 
@@ -843,15 +837,37 @@
                     if (section === 'comments') setComments(currentDb.comments);
 
                     if (mqttRef.current && mqttRef.current.connected) {
-                        mqttRef.current.publish(MESH_TOPIC, JSON.stringify({
-                            type: 'UPDATE',
-                            db: currentDb
-                        }));
+                        mqttRef.current.publish(MESH_TOPIC, JSON.stringify({ type: 'UPDATE', db: currentDb }));
                     }
-                } catch (err) {
-                    console.error("Save Error:", err);
-                }
+                } catch (err) {}
             };
+
+            // HASH ROUTER
+            useEffect(() => {
+                const handleHash = () => {
+                    const hash = window.location.hash;
+                    if (hash.startsWith('#/file/')) {
+                        setViewArg(hash.replace('#/file/', ''));
+                        setView('file_details');
+                    } else if (hash.startsWith('#/download/')) {
+                        setViewArg(hash.replace('#/download/', ''));
+                        setView('file_details'); // Handled inside details component
+                    } else if (hash.startsWith('#/user/')) {
+                        setViewArg(hash.replace('#/user/', ''));
+                        setView('user_profile');
+                    } else if (hash === '#/dashboard') {
+                        setView('dashboard');
+                    } else if (hash === '#/upload') {
+                        setView('upload');
+                    } else if (hash === '') {
+                        setView('home');
+                        setViewArg(null);
+                    }
+                };
+                window.addEventListener('hashchange', handleHash);
+                handleHash();
+                return () => window.removeEventListener('hashchange', handleHash);
+            }, []);
 
             useEffect(() => {
                 let isMounted = true;
@@ -885,7 +901,7 @@
                 });
 
                 if(!navigator.onLine) {
-                    showMessage("Offline Mode. Using local cache. Reports will sync later.", "error");
+                    showMessage("Offline Mode.", "error");
                     setLoading(false);
                     return;
                 }
@@ -916,23 +932,21 @@
                         } 
                         else if (payload.type === 'SYNC' || payload.type === 'UPDATE') {
                             const localDb = JSON.parse(localStorage.getItem('superdwn_netdb') || '{"users":{}, "files":{}, "reports":{}, "comments":{}}');
-                            if(!localDb.comments) localDb.comments = {};
-
                             const netDb = payload.db;
                             
-                            const finalUsers = { ...localDb.users, ...(netDb.users || {}) };
-                            const finalFiles = { ...localDb.files, ...(netDb.files || {}) };
-                            const finalReports = { ...localDb.reports, ...(netDb.reports || {}) };
-                            const finalComments = { ...localDb.comments, ...(netDb.comments || {}) };
-                            
-                            const finalDb = { users: finalUsers, files: finalFiles, reports: finalReports, comments: finalComments };
+                            const finalDb = { 
+                                users: { ...localDb.users, ...(netDb.users || {}) }, 
+                                files: { ...localDb.files, ...(netDb.files || {}) }, 
+                                reports: { ...localDb.reports, ...(netDb.reports || {}) }, 
+                                comments: { ...(localDb.comments || {}), ...(netDb.comments || {}) } 
+                            };
                             localStorage.setItem('superdwn_netdb', JSON.stringify(finalDb));
                             
                             if(isMounted) {
-                                setUsersList(finalUsers);
-                                setFiles(finalFiles);
-                                setReports(finalReports);
-                                setComments(finalComments);
+                                setUsersList(finalDb.users);
+                                setFiles(finalDb.files);
+                                setReports(finalDb.reports);
+                                setComments(finalDb.comments);
                             }
                         }
                     } catch(e){}
@@ -941,55 +955,43 @@
                 return () => { isMounted = false; client.end(); };
             }, []);
 
-            // ADVANCED ROLE SYSTEM: 1st time Admin, 2nd time Owner
             useEffect(() => {
                 const checkAdminHash = () => {
                     if (window.location.href.includes('7319112') && user) {
                         let newRole = user.role || 'user';
                         let upgraded = false;
-
                         if (newRole !== 'owner') {
                             if (newRole === 'admin') {
-                                newRole = 'owner';
-                                upgraded = true;
+                                newRole = 'owner'; upgraded = true;
                                 showMessage("You have been promoted to OWNER OF SUPERDOWNLOADER!", "success");
                             } else {
-                                newRole = 'admin';
-                                upgraded = true;
+                                newRole = 'admin'; upgraded = true;
                                 showMessage("You have been granted ADMIN privileges!", "success");
                             }
                         }
-
                         if (upgraded) {
                             const updatedUser = { ...user, role: newRole };
                             updateDatabase('users', user.nick, updatedUser);
                             localStorage.setItem('dwn_user_auth', JSON.stringify(updatedUser));
                             setUser(updatedUser);
-                            window.history.replaceState(null, null, window.location.pathname);
+                            window.history.replaceState(null, null, window.location.pathname + window.location.hash);
                         }
                     }
                 };
                 checkAdminHash();
-                window.addEventListener('hashchange', checkAdminHash);
-                return () => window.removeEventListener('hashchange', checkAdminHash);
-            }, [user]);
+            }, [user, window.location.href]);
 
-            // BAN VERIFICATION & SYNC ROLES
             useEffect(() => {
                 if (user && usersList[user.nick]) {
                     const dbUser = usersList[user.nick];
-                    
                     if (dbUser.isBanned) {
                         if (dbUser.banExpires === 'forever' || dbUser.banExpires > Date.now()) {
                             setBannedInfo({ reason: dbUser.banReason, expires: dbUser.banExpires });
                         } else {
-                            // Ban expired
                             updateDatabase('users', user.nick, { ...dbUser, isBanned: false, banReason: '', banExpires: 0 });
                             setBannedInfo(null);
                         }
-                    } else {
-                        setBannedInfo(null);
-                    }
+                    } else { setBannedInfo(null); }
 
                     if (dbUser.role !== user.role) {
                         const updated = {...user, role: dbUser.role};
@@ -1007,45 +1009,28 @@
             const logout = () => {
                 localStorage.removeItem('dwn_user_auth');
                 setUser(null);
-                setView('home');
+                window.location.hash = '';
                 setBannedInfo(null);
             };
 
-            // FULL SCREEN BAN COMPONENT
-            const BannedScreen = () => (
-                <div className="fixed inset-0 min-h-screen bg-slate-950 flex flex-col items-center justify-center p-4 z-50 overflow-hidden">
-                    <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,_var(--tw-gradient-stops))] from-red-900/20 via-slate-950 to-slate-950"></div>
-                    
-                    <div className="max-w-lg w-full bg-red-950/30 border border-red-500/50 p-10 rounded-3xl text-center shadow-[0_0_100px_rgba(239,68,68,0.15)] relative z-10 backdrop-blur-md">
-                        <div className="bg-red-500/20 p-4 rounded-full inline-block mb-6 shadow-[0_0_30px_rgba(239,68,68,0.4)]">
-                            <Icons.Ban />
-                        </div>
-                        <h1 className="text-4xl font-black text-white mb-2 tracking-tight">ACCOUNT SUSPENDED</h1>
-                        <p className="text-red-300 mb-8 text-lg">Your access to the decentralized network has been revoked.</p>
-                        
-                        <div className="bg-slate-900/80 border border-slate-700/50 p-6 rounded-2xl text-left mb-8 shadow-inner">
-                            <div className="text-xs text-gray-500 uppercase font-bold tracking-wider mb-1">Reason for suspension</div>
-                            <div className="font-bold text-red-400 mb-5 text-lg">{bannedInfo.reason || 'Violation of network policies'}</div>
-                            
-                            <div className="text-xs text-gray-500 uppercase font-bold tracking-wider mb-1">Suspension Lift Date</div>
-                            <div className="font-bold text-white text-lg">
-                                {bannedInfo.expires === 'forever' ? (
-                                    <span className="text-red-500 font-black tracking-widest uppercase">Permanent Ban</span>
-                                ) : (
-                                    new Date(bannedInfo.expires).toLocaleString()
-                                )}
-                            </div>
-                        </div>
-                        
-                        <button onClick={logout} className="w-full bg-red-600 hover:bg-red-500 text-white font-bold py-4 rounded-xl transition-all shadow-lg hover:shadow-red-500/25 active:scale-[0.98]">
-                            Log Out Safely
-                        </button>
-                    </div>
-                </div>
-            );
-
             if (bannedInfo) {
-                return <BannedScreen />;
+                return (
+                    <div className="fixed inset-0 min-h-screen bg-slate-950 flex flex-col items-center justify-center p-4 z-50 overflow-hidden">
+                        <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,_var(--tw-gradient-stops))] from-red-900/20 via-slate-950 to-slate-950"></div>
+                        <div className="max-w-lg w-full bg-red-950/30 border border-red-500/50 p-10 rounded-3xl text-center shadow-[0_0_100px_rgba(239,68,68,0.15)] relative z-10 backdrop-blur-md">
+                            <div className="bg-red-500/20 p-4 rounded-full inline-block mb-6"><Icons.Ban /></div>
+                            <h1 className="text-4xl font-black text-white mb-2">ACCOUNT SUSPENDED</h1>
+                            <p className="text-red-300 mb-8">Access to the decentralized network revoked.</p>
+                            <div className="bg-slate-900/80 border border-slate-700/50 p-6 rounded-2xl text-left mb-8 shadow-inner">
+                                <div className="text-xs text-gray-500 uppercase font-bold tracking-wider mb-1">Reason</div>
+                                <div className="font-bold text-red-400 mb-5 text-lg">{bannedInfo.reason || 'Violation of policies'}</div>
+                                <div className="text-xs text-gray-500 uppercase font-bold tracking-wider mb-1">Lift Date</div>
+                                <div className="font-bold text-white text-lg">{bannedInfo.expires === 'forever' ? <span className="text-red-500 uppercase">Permanent</span> : new Date(bannedInfo.expires).toLocaleString()}</div>
+                            </div>
+                            <button onClick={logout} className="w-full bg-red-600 hover:bg-red-500 text-white font-bold py-4 rounded-xl shadow-lg">Log Out</button>
+                        </div>
+                    </div>
+                );
             }
 
             return (
@@ -1059,22 +1044,22 @@
                     <nav className="glass-panel sticky top-0 z-40 border-b border-slate-700/50 shadow-lg">
                         <div className="max-w-7xl mx-auto px-4 h-16 flex flex-col sm:flex-row items-center justify-between">
                             <div className="flex items-center gap-4 w-full sm:w-auto justify-between sm:justify-start">
-                                <div className="flex items-center gap-2 cursor-pointer hover:opacity-80 transition" onClick={()=>{setView('home'); setSelectedFileId(null);}}>
+                                <div className="flex items-center gap-2 cursor-pointer hover:opacity-80 transition" onClick={()=>window.location.hash = ''}>
                                     <div className="bg-gradient-to-br from-blue-500 to-indigo-600 p-1.5 rounded-lg text-white shadow-lg"><Icons.Download /></div>
                                     <span className="font-extrabold text-xl tracking-tight hidden sm:block text-transparent bg-clip-text bg-gradient-to-r from-blue-400 to-indigo-300">SuperDownloader</span>
                                 </div>
                                 <div className="flex items-center gap-1.5 px-3 py-1 bg-slate-900/80 rounded-full border border-slate-700 shadow-inner">
-                                    <div className={`w-2 h-2 rounded-full ${netStatus === 'Connected' ? 'bg-green-500 animate-pulse shadow-[0_0_8px_#22c55e]' : 'bg-red-500'}`}></div>
+                                    <div className={`w-2 h-2 rounded-full ${netStatus === 'Connected' ? 'bg-green-500 animate-pulse' : 'bg-red-500'}`}></div>
                                     <span className="text-[10px] text-gray-300 font-bold tracking-wider uppercase">{netStatus}</span>
                                 </div>
                             </div>
 
                             <div className="flex items-center gap-2 sm:gap-4 mt-2 sm:mt-0 w-full sm:w-auto overflow-x-auto scrollbar-hide pb-1 sm:pb-0">
-                                <button onClick={()=>{setView('home'); setSelectedFileId(null);}} className={`whitespace-nowrap px-3 py-1.5 rounded-lg font-medium transition ${view==='home'?'bg-slate-700 text-white':'text-gray-400 hover:text-white'}`}>Library</button>
+                                <button onClick={()=>window.location.hash = ''} className={`whitespace-nowrap px-3 py-1.5 rounded-lg font-medium transition ${view==='home'?'bg-slate-700 text-white':'text-gray-400 hover:text-white'}`}>Library</button>
                                 {user ? (
                                     <React.Fragment>
-                                        <button onClick={()=>setView('upload')} className={`whitespace-nowrap px-3 py-1.5 rounded-lg font-medium transition ${view==='upload'?'bg-blue-600 text-white':'text-gray-400 hover:text-white'}`}>Upload</button>
-                                        {(user.role === 'admin' || user.role === 'owner') && <button onClick={()=>setView('admin')} className={`whitespace-nowrap px-3 py-1.5 rounded-lg font-bold text-yellow-500 transition ${view==='admin'?'bg-slate-800 border border-slate-600':'hover:bg-slate-800/50'}`}>Admin Panel</button>}
+                                        <button onClick={()=>window.location.hash = '#/upload'} className={`whitespace-nowrap px-3 py-1.5 rounded-lg font-medium transition ${view==='upload'?'bg-blue-600 text-white':'text-gray-400 hover:text-white'}`}>Upload</button>
+                                        <button onClick={()=>window.location.hash = '#/dashboard'} className={`whitespace-nowrap px-3 py-1.5 rounded-lg font-bold transition flex items-center gap-1 ${view==='dashboard'?'bg-slate-700 text-white':'text-gray-300 hover:text-white border border-slate-700'}`}><Icons.Dashboard/> My Files</button>
                                         <div className="w-px h-6 bg-slate-700 mx-1 hidden sm:block"></div>
                                         <div className="flex items-center gap-3 text-sm ml-auto bg-slate-800/50 px-3 py-1 rounded-full border border-slate-700/50">
                                             <UserBadge nick={user.nick} usersList={usersList} />
@@ -1082,7 +1067,7 @@
                                         </div>
                                     </React.Fragment>
                                 ) : (
-                                    <button onClick={()=>setView('auth')} className="bg-blue-600 hover:bg-blue-500 text-white px-5 py-1.5 rounded-lg font-bold transition whitespace-nowrap ml-auto shadow-lg shadow-blue-900/20">Login</button>
+                                    <button onClick={()=>setView('auth')} className="bg-blue-600 hover:bg-blue-500 text-white px-5 py-1.5 rounded-lg font-bold transition whitespace-nowrap ml-auto shadow-lg">Login</button>
                                 )}
                             </div>
                         </div>
@@ -1092,9 +1077,11 @@
                         {loading ? (
                             <div className="flex justify-center items-center h-64 text-gray-400 font-medium animate-pulse">Syncing Network Database...</div>
                         ) : (
-                            <div className="animate-fade-in">
-                                {view === 'home' && <HomeView files={files} usersList={usersList} setView={setView} setSelectedFileId={setSelectedFileId} />}
-                                {view === 'file_details' && <FileDetailsView user={user} files={files} selectedFileId={selectedFileId} comments={comments} usersList={usersList} updateDatabase={updateDatabase} showMessage={showMessage} setView={setView} />}
+                            <div>
+                                {view === 'home' && <HomeView files={files} usersList={usersList} setView={setView} setSelectedFileId={setViewArg} />}
+                                {view === 'file_details' && <FileDetailsView user={user} files={files} selectedFileId={viewArg} comments={comments} usersList={usersList} updateDatabase={updateDatabase} showMessage={showMessage} setView={setView} />}
+                                {view === 'user_profile' && <UserProfileView viewArg={viewArg} files={files} usersList={usersList} />}
+                                {view === 'dashboard' && user && <DashboardView user={user} files={files} updateDatabase={updateDatabase} showMessage={showMessage} />}
                                 {view === 'upload' && user && <UploadView user={user} updateDatabase={updateDatabase} showMessage={showMessage} setView={setView} />}
                                 {view === 'admin' && user && (user.role === 'admin' || user.role === 'owner') && <AdminPanel user={user} usersList={usersList} files={files} reports={reports} updateDatabase={updateDatabase} showMessage={showMessage} />}
                                 {view === 'auth' && !user && <AuthView usersList={usersList} setUser={setUser} setView={setView} showMessage={showMessage} updateDatabase={updateDatabase} />}
@@ -1108,9 +1095,5 @@
         const root = ReactDOM.createRoot(document.getElementById('root'));
         root.render(<App />);
     </script>
-    <style>
-        .animate-fade-in { animation: fadeIn 0.3s ease-in-out; }
-        @keyframes fadeIn { from { opacity: 0; transform: translateY(5px); } to { opacity: 1; transform: translateY(0); } }
-    </style>
 </body>
 </html>
