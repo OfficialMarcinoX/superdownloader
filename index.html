@@ -277,73 +277,78 @@
             const performAntivirusScan = async (fileObj, fileDesc) => {
                 setScanning(true);
 
-                if (!GEMINI_API_KEY || GEMINI_API_KEY === "TUTAJ_WKLEJ_SWOJ_KLUCZ_API") {
-                    await new Promise(r => setTimeout(r, 2000));
-                    const maliciousKeywords = ['trojan', 'hack', 'stealer', 'virus', 'cheat'];
+                // Fallback function when AI fails or key is missing
+                const offlineFallbackScan = async () => {
+                    await new Promise(r => setTimeout(r, 1000)); // Simulate quick scan
+                    const maliciousKeywords = ['trojan', 'hack', 'stealer', 'virus', 'malware'];
                     const isMalicious = maliciousKeywords.some(w => fileObj.name.toLowerCase().includes(w));
                     setScanning(false);
                     if (isMalicious) {
-                        setScanResult({ safe: false, msg: 'Threat detected (Offline Heuristics)!' });
+                        setScanResult({ safe: false, msg: 'Threat detected (Offline Backup Heuristics)!' });
                         return false;
                     }
-                    setScanResult({ safe: true, msg: 'File is clean. (Local Verification)' });
+                    setScanResult({ safe: true, msg: 'File is clean. (Offline Backup Scan)' });
                     return true;
+                };
+
+                if (!GEMINI_API_KEY || GEMINI_API_KEY === "TUTAJ_WKLEJ_SWOJ_KLUCZ_API") {
+                    return await offlineFallbackScan();
                 }
 
                 try {
-                    let fileContentSnippet = "Not analyzed (binary or large file).";
+                    let fileContentSnippet = "Not analyzed (binary, large file, or empty).";
                     
-                    // Advanced Feature: Read the actual code of small script files for the AI
                     const textExtensions = ['.js', '.py', '.html', '.json', '.txt', '.bat', '.cmd', '.pyw', '.sh'];
                     const isText = textExtensions.some(ext => fileObj.name.toLowerCase().endsWith(ext));
                     
-                    if (isText && fileObj.size < 100 * 1024) { // Read only if less than 100KB
+                    if (isText && fileObj.size > 0 && fileObj.size < 100 * 1024) { 
                         const reader = new FileReader();
                         fileContentSnippet = await new Promise(resolve => {
-                            reader.onload = e => resolve(e.target.result.substring(0, 15000)); // Limit to first 15k chars for prompt safety
+                            reader.onload = e => resolve(e.target.result.substring(0, 15000)); 
                             reader.onerror = () => resolve("Could not read file.");
                             reader.readAsText(fileObj);
                         });
                     }
 
-                    const promptText = `As an expert cybersecurity analyst, deeply analyze this file being uploaded to a public network.
-                    
+                    const promptText = `As an expert cybersecurity analyst, analyze this file.
                     File Name: "${fileObj.name}"
                     Size: ${fileObj.size} bytes
-                    User Description: "${fileDesc || 'No description'}"
-                    File Content Snippet (if text/script): 
-                    """
-                    ${fileContentSnippet}
-                    """
+                    Description: "${fileDesc || 'No description'}"
+                    Code Snippet: """${fileContentSnippet}"""
 
-                    Task: Determine if this file is genuinely malicious (e.g., malware, stealer, destructive virus, actual trojan). 
-                    IMPORTANT RULES:
-                    1. Do NOT flag safe game files, normal scripts, legitimate tools, or files just because they have words like "hack" or "cheat" in the name or description. Use your logic.
-                    2. If file content snippet is provided, actively analyze the code for malicious intent (e.g., stealing Discord tokens, destructive OS commands, obfuscated malware payloads).
+                    CRITICAL RULES:
+                    1. DEFAULT TO SAFE. If the file is empty, unknown, a simple game, or a normal script, it is SAFE.
+                    2. ONLY flag as unsafe (safe: false) if the code snippet clearly shows malicious intent (stealing tokens, destroying OS, malicious payloads) or if it's a known dangerous binary pattern.
+                    3. DO NOT flag just because the name contains 'hack', 'cheat', or is missing an extension.
                     
-                    Respond ONLY in JSON format, exactly like this:
-                    {"safe": true/false, "msg": "Short specific reason in English"}`;
+                    Respond ONLY in valid JSON format:
+                    {"safe": true, "msg": "Short reason in English"}`;
 
                     const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${GEMINI_API_KEY}`, {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ contents: [{ parts: [{ text: promptText }] }] })
+                        body: JSON.stringify({ 
+                            contents: [{ parts: [{ text: promptText }] }],
+                            generationConfig: { responseMimeType: "application/json" } // Force JSON response to prevent parsing errors
+                        })
                     });
+
+                    if (!response.ok) {
+                        throw new Error(`API HTTP Error: ${response.status}`);
+                    }
 
                     const data = await response.json();
                     const textResponse = data.candidates[0].content.parts[0].text;
-                    const cleanJson = textResponse.replace(/```json/g, '').replace(/```/g, '').trim();
-                    const aiResult = JSON.parse(cleanJson);
+                    const aiResult = JSON.parse(textResponse);
 
                     setScanning(false);
-                    setScanResult({ safe: aiResult.safe, msg: aiResult.msg + ' (Deep Scan by Gemini AI)' });
+                    setScanResult({ safe: aiResult.safe, msg: aiResult.msg + ' (Scanned by Gemini AI)' });
                     return aiResult.safe;
 
                 } catch (error) {
-                    console.error("AI Error:", error);
-                    setScanning(false);
-                    setScanResult({ safe: false, msg: 'AI server connection error. Try again.' });
-                    return false;
+                    console.warn("AI Server Error/Key Invalid. Falling back to offline scanner:", error);
+                    // Instead of blocking everything on error, we fall back to the safe offline scan!
+                    return await offlineFallbackScan();
                 }
             };
 
