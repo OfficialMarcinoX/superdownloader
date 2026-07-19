@@ -133,30 +133,61 @@
         let currentActiveParams = {};
 
         // ---------------------------------------------------------
-        // CUSTOM SUPERSYNC ENGINE (LIKE WHATSAPP WEB)
+        // CUSTOM SUPERSYNC ENGINE (LIKE WHATSAPP WEB) - FIX PORTÓW
         // ---------------------------------------------------------
-        // Łączymy się przez szybki publiczny tunel WebSocketowy (HiveMQ)
-        // Działa to tak samo jak gniazda WhatsAppa - wiadomości latają w < 0.1s
-        const syncClient = mqtt.connect('wss://broker.hivemq.com:8000/mqtt');
-        const SYNC_TOPIC = 'superdownloader_supersync_engine_xyz_v1';
+        // Łączymy się przez stabilny serwer EMQX na bezpiecznym porcie 8084 (odporny na blokady routerów)
+        const syncClient = mqtt.connect('wss://broker.emqx.io:8084/mqtt', {
+            keepalive: 30,
+            reconnectPeriod: 1000,
+            clean: true,
+            connectTimeout: 5000
+        });
+        const SYNC_TOPIC = 'superdownloader_supersync_engine_xyz_v3'; // Nowy odblokowany kanał
+
+        // Funkcja do płynnej obsługi statusu połączenia UI
+        function updateSyncStatus(state) {
+            const badge = document.getElementById('syncStatusBadge');
+            const dot = document.getElementById('syncStatusDot');
+            const text = document.getElementById('syncStatusText');
+            if(!badge || !dot || !text) return;
+            
+            // Resetujemy klasy
+            badge.className = 'ml-2 px-2 py-1 text-[10px] rounded-full font-bold flex items-center gap-1 transition-colors';
+            
+            if(state === 'connected') {
+                badge.classList.add('bg-green-100', 'text-green-700');
+                dot.className = 'w-2 h-2 bg-green-500 rounded-full animate-pulse';
+                text.textContent = 'SuperSync 0.1s';
+            } else if (state === 'error' || state === 'offline') {
+                badge.classList.add('bg-red-100', 'text-red-700');
+                dot.className = 'w-2 h-2 bg-red-500 rounded-full';
+                text.textContent = 'Offline';
+            } else {
+                badge.classList.add('bg-yellow-100', 'text-yellow-700');
+                dot.className = 'w-2 h-2 bg-yellow-500 rounded-full animate-pulse';
+                text.textContent = 'Connecting...';
+            }
+        }
 
         syncClient.on('connect', () => {
-            console.log('SuperSync Engine: Connected (WebSocket Tunnel)');
-            
-            // Zmiana UI na Zielony po połączeniu
-            document.getElementById('syncStatusBadge').classList.replace('bg-yellow-100', 'bg-green-100');
-            document.getElementById('syncStatusBadge').classList.replace('text-yellow-700', 'text-green-700');
-            document.getElementById('syncStatusDot').classList.replace('bg-yellow-500', 'bg-green-500');
-            document.getElementById('syncStatusText').textContent = 'SuperSync 0.1s';
+            console.log('SuperSync Engine: Connected (EMQX Secure WebSocket Tunnel)');
+            updateSyncStatus('connected');
             
             // Zaczynamy nasłuchiwać zmian
             syncClient.subscribe(SYNC_TOPIC);
 
-            // Jeśli my mamy aplikacje a dopiero się podłączyliśmy, to na wszelki wypadek "utrwalamy" (retain) stan
-            // Dzięki temu każdy nowy telefon od razu dostanie naszą bazę!
+            // Jeśli my mamy aplikacje a dopiero się podłączyliśmy, wysyłamy nasz stan innym
             setTimeout(() => {
                 if (db.apps.length > 0) broadcastState();
             }, 1000);
+        });
+
+        // Reagowanie na problemy z siecią na żywo
+        syncClient.on('reconnect', () => updateSyncStatus('connecting'));
+        syncClient.on('offline', () => updateSyncStatus('offline'));
+        syncClient.on('error', (err) => { 
+            console.error('SuperSync Error:', err); 
+            updateSyncStatus('error'); 
         });
 
         syncClient.on('message', (topic, message) => {
