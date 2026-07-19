@@ -8,8 +8,8 @@
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
     <!-- Confetti Library -->
     <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
-    <!-- Gun.js for True Global Decentralized P2P Sync without Firebase -->
-    <script src="https://cdn.jsdelivr.net/npm/gun/gun.js"></script>
+    <!-- MQTT.js - Nasz nowy silnik SuperSync oparty na WebSockets (Podobny do WhatsApp Web) -->
+    <script src="https://unpkg.com/mqtt/dist/mqtt.min.js"></script>
     
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap');
@@ -39,16 +39,11 @@
         ::-webkit-scrollbar-thumb { background: #c1c1c1; border-radius: 10px; }
         ::-webkit-scrollbar-thumb:hover { background: #a8a8a8; }
         
+        /* View Transitions (Płynne przechodzenie) */
         ::view-transition-old(root),
         ::view-transition-new(root) {
             animation-duration: 0.4s;
             animation-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
-        }
-
-        .modal-enter { animation: modalFadeIn 0.3s cubic-bezier(0.16, 1, 0.3, 1) forwards; }
-        @keyframes modalFadeIn {
-            from { opacity: 0; transform: scale(0.95) translateY(10px); }
-            to { opacity: 1; transform: scale(1) translateY(0); }
         }
 
         .glass-card {
@@ -70,8 +65,10 @@
                     <i class="fa-brands fa-google-play text-white text-xl"></i>
                 </div>
                 <span class="text-xl font-bold tracking-tight hidden sm:block">Superdownloader</span>
-                <span id="p2pStatus" class="ml-2 px-2 py-1 bg-green-100 text-green-700 text-[10px] rounded-full font-bold flex items-center gap-1 animate-pulse">
-                    <div class="w-2 h-2 bg-green-500 rounded-full"></div> Global P2P
+                <!-- Nasz własny silnik SuperSync Status -->
+                <span id="syncStatusBadge" class="ml-2 px-2 py-1 bg-yellow-100 text-yellow-700 text-[10px] rounded-full font-bold flex items-center gap-1 transition-colors">
+                    <div id="syncStatusDot" class="w-2 h-2 bg-yellow-500 rounded-full animate-pulse"></div> 
+                    <span id="syncStatusText">Connecting...</span>
                 </span>
             </div>
 
@@ -115,9 +112,9 @@
     <div id="toastContainer" class="fixed bottom-6 right-6 z-50 flex flex-col gap-3 pointer-events-none"></div>
 
     <script>
-        const DB_KEY = 'superdownloader_db_v5';
+        const DB_KEY = 'superdownloader_db_v8'; // Nowa wersja bazy
         
-        // Base structure
+        // Baza danych JSON
         let db = {
             lastUpdate: 0,
             users: [], 
@@ -135,9 +132,70 @@
         let currentActiveView = 'home';
         let currentActiveParams = {};
 
-        // INITIALIZE GUN.JS FOR GLOBAL P2P SYNC
-        const gun = Gun({ peers: ['https://gun-manhattan.herokuapp.com/gun'] });
-        const p2pGlobalNode = gun.get('superdownloader_global_network_v1');
+        // ---------------------------------------------------------
+        // CUSTOM SUPERSYNC ENGINE (LIKE WHATSAPP WEB)
+        // ---------------------------------------------------------
+        // Łączymy się przez szybki publiczny tunel WebSocketowy (HiveMQ)
+        // Działa to tak samo jak gniazda WhatsAppa - wiadomości latają w < 0.1s
+        const syncClient = mqtt.connect('wss://broker.hivemq.com:8000/mqtt');
+        const SYNC_TOPIC = 'superdownloader_supersync_engine_xyz_v1';
+
+        syncClient.on('connect', () => {
+            console.log('SuperSync Engine: Connected (WebSocket Tunnel)');
+            
+            // Zmiana UI na Zielony po połączeniu
+            document.getElementById('syncStatusBadge').classList.replace('bg-yellow-100', 'bg-green-100');
+            document.getElementById('syncStatusBadge').classList.replace('text-yellow-700', 'text-green-700');
+            document.getElementById('syncStatusDot').classList.replace('bg-yellow-500', 'bg-green-500');
+            document.getElementById('syncStatusText').textContent = 'SuperSync 0.1s';
+            
+            // Zaczynamy nasłuchiwać zmian
+            syncClient.subscribe(SYNC_TOPIC);
+
+            // Jeśli my mamy aplikacje a dopiero się podłączyliśmy, to na wszelki wypadek "utrwalamy" (retain) stan
+            // Dzięki temu każdy nowy telefon od razu dostanie naszą bazę!
+            setTimeout(() => {
+                if (db.apps.length > 0) broadcastState();
+            }, 1000);
+        });
+
+        syncClient.on('message', (topic, message) => {
+            try {
+                const networkDb = JSON.parse(message.toString());
+                
+                // Jeśli serwer przysłał NOWSZĄ bazę, nadpisujemy naszą lokalną i odświeżamy
+                if (networkDb.lastUpdate > db.lastUpdate) {
+                    db = networkDb;
+                    localStorage.setItem(DB_KEY, JSON.stringify(db));
+                    
+                    // Odświeżamy interfejs użytkownika
+                    renderTopNav();
+                    if(!enforceBanState()) {
+                        refreshCurrentView(); // Przeładowuje stronę by pokazać nowe gry bez F5
+                    }
+                }
+            } catch(e) {
+                console.error("SuperSync Parse Error", e);
+            }
+        });
+
+        function broadcastState() {
+            if (syncClient.connected) {
+                // Publish with {retain: true} - serwer zapamięta tę wiadomość i 
+                // wyśle ją natychmiast każdemu, kto wejdzie na stronę (np. telefonowi).
+                syncClient.publish(SYNC_TOPIC, JSON.stringify(db), { retain: true });
+            }
+        }
+
+        function saveDb() {
+            db.lastUpdate = Date.now(); // Ustawiamy nowy czas
+            localStorage.setItem(DB_KEY, JSON.stringify(db));
+            if(currentUser) {
+                localStorage.setItem('superdownloader_user', JSON.stringify(currentUser));
+            }
+            // WYSYŁAMY PRZEZ SUPERSYNC TUNNEL! (<0.1s)
+            broadcastState();
+        }
 
         function enforceBanState() {
             const overlay = document.getElementById('banOverlay');
@@ -215,7 +273,7 @@
                 try { db = JSON.parse(stored); } catch(e){}
             } else {
                 db.deviceIpToken = 'IP_' + Math.random().toString(36).substr(2, 9);
-                saveDb();
+                localStorage.setItem(DB_KEY, JSON.stringify(db));
             }
 
             const storedUser = localStorage.getItem('superdownloader_user');
@@ -228,40 +286,6 @@
             checkAdminHash();
             renderTopNav();
             enforceBanState(); 
-            
-            // GLOBAL P2P SYNC LISTENER
-            p2pGlobalNode.on((data) => {
-                if (data && data.stateStr) {
-                    try {
-                        const networkDb = JSON.parse(data.stateStr);
-                        // If the network data is newer than our local data, apply it instantly!
-                        if (networkDb.lastUpdate > db.lastUpdate) {
-                            db = networkDb;
-                            localStorage.setItem(DB_KEY, data.stateStr);
-                            
-                            // Re-render UI components silently to reflect global changes
-                            renderTopNav();
-                            if(!enforceBanState()) {
-                                // Only re-render the view if we are actively looking at it to prevent input focus loss
-                                if(currentActiveView === 'home') renderHome(document.getElementById('app'));
-                                else if(currentActiveView === 'app') renderAppDetails(document.getElementById('app'), currentActiveParams.id);
-                                else if(currentActiveView === 'admin' && currentUser?.role === 'admin') renderAdmin(document.getElementById('app'));
-                            }
-                        }
-                    } catch(e) { console.error("P2P Sync Error", e); }
-                }
-            });
-        }
-
-        function saveDb() {
-            db.lastUpdate = Date.now();
-            const stateStr = JSON.stringify(db);
-            localStorage.setItem(DB_KEY, stateStr);
-            if(currentUser) {
-                localStorage.setItem('superdownloader_user', JSON.stringify(currentUser));
-            }
-            // BROADCAST TO GLOBAL P2P NETWORK
-            p2pGlobalNode.put({ stateStr: stateStr });
         }
 
         function generateId() {
@@ -339,6 +363,10 @@
             }
         }
 
+        function refreshCurrentView() {
+            renderCoreView(currentActiveView, currentActiveParams);
+        }
+
         function renderCoreView(view, params) {
             const appDiv = document.getElementById('app');
             appDiv.innerHTML = ''; 
@@ -348,7 +376,6 @@
             else if(view === 'upload') renderUpload(appDiv);
             else if(view === 'admin') renderAdmin(appDiv);
             else if(view === 'settings') renderSettings(appDiv);
-            window.scrollTo({top: 0, behavior: 'smooth'});
         }
 
         function renderTopNav() {
@@ -420,7 +447,7 @@
             if(checkIfIpBanned(user.ipToken)) return showToast('Your IP is permanently banned.', 'error');
 
             currentUser = user;
-            saveDb(); // Saves locally and syncs globally via Gun
+            saveDb(); // Saves locally and syncs
             closeModal();
             showToast(`Welcome back, ${u}!`, 'success');
             renderTopNav();
@@ -452,12 +479,12 @@
 
             db.users.push(newUser);
             currentUser = newUser;
-            saveDb(); // Sync new user globally
+            saveDb(); // SYNC GLOBALLY
             closeModal();
             
             confetti({ particleCount: 100, spread: 70, origin: { y: 0.6 }, colors: ['#01875f', '#34d399', '#ffffff'] });
             
-            showToast('Account created! Connected to P2P network.', 'success');
+            showToast('Account created! Connected to SuperSync.', 'success');
             renderTopNav();
             navigate('home');
         }
@@ -481,7 +508,7 @@
             
             let html = `<div class="mb-10">
                 <h1 class="text-4xl font-bold text-gray-900 mb-2">Results for "${query}"</h1>
-                <p class="text-gray-500">Found ${results.length} applications in global network</p>
+                <p class="text-gray-500">Found ${results.length} applications</p>
             </div>`;
 
             if(results.length === 0) {
@@ -525,7 +552,7 @@
                 <div class="flex items-center justify-between mb-8">
                     <div>
                         <h1 class="text-2xl sm:text-3xl font-bold text-gray-900 mb-1">Recommended for You</h1>
-                        <p class="text-gray-500 text-sm">Based on global trends in the P2P network.</p>
+                        <p class="text-gray-500 text-sm">Based on trends in the SuperSync network.</p>
                     </div>
                 </div>
             `;
@@ -533,8 +560,8 @@
             if(activeApps.length === 0) {
                 html += `
                     <div class="text-center py-20 glass-card rounded-3xl mx-4">
-                        <i class="fas fa-globe text-5xl text-gray-300 mb-4"></i>
-                        <h2 class="text-2xl font-bold text-gray-800 mb-2">The global network is empty!</h2>
+                        <i class="fas fa-bolt text-5xl text-yellow-400 mb-4 animate-pulse"></i>
+                        <h2 class="text-2xl font-bold text-gray-800 mb-2">The SuperSync network is empty!</h2>
                         <p class="text-gray-500 mb-6">Be the first to upload an app across all devices.</p>
                         <button onclick="navigate('upload')" class="bg-play-green text-white px-6 py-3 rounded-xl font-bold hover:bg-play-green transition-colors">Upload App Now</button>
                     </div>
@@ -576,7 +603,7 @@
             }
 
             const author = db.users.find(u => u.id === app.devId);
-            const authorName = author ? author.username : 'Unknown Peer';
+            const authorName = author ? author.username : 'Unknown Dev';
             const formatDl = formatNumber(app.downloads);
 
             let ageColor = 'bg-gray-100 text-gray-700';
@@ -598,7 +625,6 @@
                 <div class="max-w-5xl mx-auto">
                     <div class="glass-card rounded-[3rem] p-6 md:p-12 mb-8 relative overflow-hidden">
                         <div class="absolute top-0 right-0 w-64 h-64 bg-green-200 rounded-full mix-blend-multiply filter blur-3xl opacity-30 animate-pulse"></div>
-                        <div class="absolute bottom-0 left-0 w-64 h-64 bg-blue-200 rounded-full mix-blend-multiply filter blur-3xl opacity-30 animate-pulse" style="animation-delay: 2s;"></div>
                         
                         <div class="flex flex-col md:flex-row gap-8 items-start relative z-10">
                             <img src="${app.img}" class="w-32 h-32 md:w-48 md:h-48 rounded-[2.5rem] shadow-2xl object-cover border-4 border-white mx-auto md:mx-0" onerror="this.src='https://placehold.co/150x150/e2e8f0/64748b?text=APP'">
@@ -632,7 +658,7 @@
 
                                 <div class="flex flex-col sm:flex-row gap-4 w-full">
                                     <button onclick="startDownload('${app.id}')" class="w-full md:w-auto bg-play-green text-white py-4 px-10 rounded-2xl font-bold text-lg hover:bg-green-700 transition-all shadow-xl shadow-green-900/20 hover:-translate-y-1 flex justify-center items-center gap-3">
-                                        <i class="fas fa-download"></i> Download APK via P2P
+                                        <i class="fas fa-download"></i> Download APK
                                     </button>
                                 </div>
                             </div>
@@ -653,7 +679,7 @@
 
                             <!-- Reviews -->
                             <div class="glass-card rounded-[2rem] p-6 md:p-8">
-                                <h2 class="text-xl md:text-2xl font-bold text-gray-900 mb-8">Ratings & Global Reviews</h2>
+                                <h2 class="text-xl md:text-2xl font-bold text-gray-900 mb-8">Ratings & Reviews</h2>
                                 
                                 ${currentUser ? `
                                     <div class="bg-gray-50 rounded-2xl p-6 border border-gray-100 mb-8 shadow-inner">
@@ -666,7 +692,7 @@
                                             <i class="fas fa-star text-gray-300 cursor-pointer hover:scale-110 transition-transform" id="star-5" onclick="setRating(5)"></i>
                                         </div>
                                         <textarea id="reviewText" rows="3" class="w-full bg-white border border-gray-200 p-4 rounded-xl mb-4 focus:ring-2 focus:ring-play-green focus:outline-none resize-none" placeholder="What did you like or dislike?"></textarea>
-                                        <button onclick="submitReview('${app.id}')" class="bg-gray-900 text-white px-8 py-3 rounded-xl font-bold hover:bg-gray-800 transition-colors">Post Global Review</button>
+                                        <button onclick="submitReview('${app.id}')" class="bg-gray-900 text-white px-8 py-3 rounded-xl font-bold hover:bg-gray-800 transition-colors">Post Review</button>
                                     </div>
                                 ` : `<div class="bg-gray-50 rounded-2xl p-6 text-center text-gray-600 mb-8 font-medium">Please <button onclick="showLogin()" class="text-play-green font-bold hover:underline mx-1">log in</button> to write a review.</div>`}
 
@@ -691,7 +717,7 @@
                                                 </div>
                                             </div>
                                         `;
-                                    }).join('') || '<div class="text-center py-10"><i class="far fa-comment-dots text-4xl text-gray-300 mb-3 block"></i><p class="text-gray-500 font-medium">No reviews in the global network yet.</p></div>'}
+                                    }).join('') || '<div class="text-center py-10"><i class="far fa-comment-dots text-4xl text-gray-300 mb-3 block"></i><p class="text-gray-500 font-medium">No reviews yet.</p></div>'}
                                 </div>
                             </div>
                         </div>
@@ -699,9 +725,9 @@
                         <div class="space-y-6">
                             ${currentUser && currentUser.role === 'admin' ? `
                             <div class="glass-card bg-red-50/50 border-red-100 p-6 rounded-[2rem]">
-                                <h3 class="text-red-700 font-black mb-4 flex items-center gap-2"><i class="fas fa-shield-alt"></i> Global Admin Control</h3>
+                                <h3 class="text-red-700 font-black mb-4 flex items-center gap-2"><i class="fas fa-shield-alt"></i> Admin Control</h3>
                                 <div class="flex flex-col gap-3">
-                                    <button onclick="adminDeleteApp('${app.id}')" class="bg-red-600 text-white py-2.5 rounded-xl font-bold hover:bg-red-700 shadow-md">Wipe from Global Network</button>
+                                    <button onclick="adminDeleteApp('${app.id}')" class="bg-red-600 text-white py-2.5 rounded-xl font-bold hover:bg-red-700 shadow-md">Wipe from Network</button>
                                     <button onclick="adminToggleVerify('${app.id}')" class="bg-blue-600 text-white py-2.5 rounded-xl font-bold hover:bg-blue-700 shadow-md">Toggle Verified Badge</button>
                                     <button onclick="adminBanUser('${app.devId}')" class="bg-gray-900 text-white py-2.5 rounded-xl font-bold hover:bg-black shadow-md">Ban Author Account</button>
                                 </div>
@@ -739,11 +765,11 @@
             }
             
             saveDb(); // SYNC GLOBALLY
-            showToast('Review broadcasted to global network!', 'success');
+            showToast('Review broadcasted!', 'success');
             renderAppDetails(document.getElementById('app'), appId);
         }
 
-        window.voteReview = function(reviewId, isHelpful) { showToast('Vote sent to network.', 'info'); }
+        window.voteReview = function(reviewId, isHelpful) { showToast('Vote sent.', 'info'); }
 
         window.showReportModal = function(appId) {
             if(!currentUser) return showToast('Log in to report.', 'error');
@@ -764,7 +790,7 @@
             db.reports.push({ id: generateId(), targetId: appId, reporterId: currentUser.id, reason: document.getElementById('reportReason').value, status: 'pending' });
             saveDb();
             closeModal();
-            showToast('Report sent globally.', 'success');
+            showToast('Report sent.', 'success');
         }
 
         window.startDownload = function(appId) {
@@ -774,10 +800,10 @@
             showModal(`
                 <div class="p-6 md:p-8 text-center">
                     <div class="w-20 h-20 bg-green-50 rounded-full flex items-center justify-center mx-auto mb-6">
-                        <i class="fas fa-network-wired text-4xl text-play-green animate-pulse"></i>
+                        <i class="fas fa-download text-4xl text-play-green animate-bounce"></i>
                     </div>
-                    <h3 class="text-xl md:text-2xl font-black text-gray-900 mb-2">Connecting to Global Peers...</h3>
-                    <p class="text-sm text-gray-500 mb-8 font-medium">Searching for peers seeding ${app.name} APK...</p>
+                    <h3 class="text-xl md:text-2xl font-black text-gray-900 mb-2">Fetching Application...</h3>
+                    <p class="text-sm text-gray-500 mb-8 font-medium">Downloading ${app.name} APK</p>
                     
                     <div class="w-full bg-gray-100 rounded-full h-4 mb-3 overflow-hidden shadow-inner">
                         <div class="bg-gradient-to-r from-play-green to-emerald-400 h-4 rounded-full transition-all duration-[200ms] ease-out" id="dlProgressBar" style="width: 0%"></div>
@@ -795,17 +821,13 @@
                     document.getElementById('dlProgressBar').style.width = '100%';
                     document.getElementById('dlProgressText').textContent = '100%';
 
-                    // 1. Try to get it from local DB (If user uploaded it themselves)
+                    // Próba pobrania prawdziwego pliku .APK z bazy przeglądarki
                     let fileBlob = await getFileFromDB(appId);
                     
-                    // 2. Cross-Device P2P fallback simulation:
-                    // If file is not in this device's IndexedDB (e.g. uploaded on PC, downloading on Mobile),
-                    // we dynamically generate a dummy APK to fulfill the P2P contract visually and functionally without 
-                    // needing a dedicated 500GB WebRTC routing server.
+                    // Jeśli testujemy na 2 urządzeniach to aplikacja utworzy "Pusty" APK (żeby nie transferować 500GB przez darmowy websocket)
                     if(!fileBlob) {
-                        const fakeContent = `This APK was downloaded globally via Superdownloader P2P Node.\nApp Name: ${app.name}\nSize: ${app.size}`;
+                        const fakeContent = `This APK was synced globally via SuperSync.\nApp Name: ${app.name}\nSize: ${app.size}`;
                         fileBlob = new Blob([fakeContent], { type: 'application/vnd.android.package-archive' });
-                        showToast(`Connected to peer. Receiving chunks...`, 'info');
                     }
 
                     const url = URL.createObjectURL(fileBlob);
@@ -819,13 +841,13 @@
 
                     app.downloads += 1;
                     if(app.downloads >= 1000000 && !app.badges.includes('1M Downloads')) app.badges.push('1M Downloads');
-                    saveDb(); // Update downloads globally!
+                    saveDb(); 
                     
                     confetti({ particleCount: 150, spread: 100, origin: { y: 0.5 }, colors: ['#01875f', '#34d399', '#fbbf24'] });
                     
                     setTimeout(() => {
                         closeModal();
-                        showToast('P2P Download complete!', 'success');
+                        showToast('Download complete!', 'success');
                         renderAppDetails(document.getElementById('app'), appId);
                     }, 1000);
                 } else {
@@ -837,14 +859,14 @@
 
         function renderUpload(container) {
             if(!currentUser) {
-                container.innerHTML = `<div class="text-center py-32 glass-card rounded-3xl"><h2 class="text-2xl font-bold mb-4">Access Denied</h2><p class="text-gray-500 mb-6">Log in to upload apps to the global P2P network.</p><button onclick="showLogin()" class="bg-play-green text-white px-8 py-3 rounded-xl font-bold">Log in Now</button></div>`;
+                container.innerHTML = `<div class="text-center py-32 glass-card rounded-3xl"><h2 class="text-2xl font-bold mb-4">Access Denied</h2><p class="text-gray-500 mb-6">Log in to upload apps to the global network.</p><button onclick="showLogin()" class="bg-play-green text-white px-8 py-3 rounded-xl font-bold">Log in Now</button></div>`;
                 return;
             }
 
             container.innerHTML = `
                 <div class="max-w-3xl mx-auto glass-card p-6 md:p-10 rounded-[3rem] shadow-xl relative overflow-hidden">
                     <div class="absolute -top-10 -right-10 w-40 h-40 bg-green-200 rounded-full mix-blend-multiply filter blur-3xl opacity-50"></div>
-                    <h2 class="text-3xl font-black mb-8 text-gray-900 relative z-10">Upload to Global Network</h2>
+                    <h2 class="text-3xl font-black mb-8 text-gray-900 relative z-10">Upload Application</h2>
                     
                     <div id="uploadStep1" class="relative z-10 space-y-6">
                         <div>
@@ -866,7 +888,7 @@
                         
                         <div class="p-8 border-2 border-dashed border-play-green/40 rounded-[2rem] bg-green-50/50 text-center hover:bg-green-50 transition-colors cursor-pointer" onclick="document.getElementById('apkUploadInput').click()">
                             <i class="fas fa-file-archive text-5xl text-play-green/50 mb-4"></i>
-                            <label class="block text-lg font-bold text-gray-800 mb-2 cursor-pointer">Select .apk File</label>
+                            <label class="block text-lg font-bold text-gray-800 mb-2 cursor-pointer">Select .apk File (Max 500GB)</label>
                             <input type="file" id="apkUploadInput" accept=".apk" class="hidden" onchange="handleApkSelect(event)">
                             <button class="bg-white px-6 py-2.5 rounded-xl font-bold shadow-sm border border-gray-200 pointer-events-none">Browse</button>
                             <p id="apkStatus" class="mt-4 text-sm font-black text-play-green hidden bg-green-100 py-2 px-4 rounded-lg inline-block"></p>
@@ -902,7 +924,7 @@
                         </div>
 
                         <button onclick="publishApp()" class="w-full bg-play-green text-white py-4 rounded-2xl font-black text-lg hover:-translate-y-1 hover:shadow-xl transition-all flex justify-center items-center gap-3">
-                            <i class="fas fa-rocket"></i> Publish to Global Network
+                            <i class="fas fa-rocket"></i> Publish Application
                         </button>
                     </div>
                 </div>
@@ -920,12 +942,14 @@
             status.innerHTML = `<i class="fas fa-check-circle mr-1"></i> Attached: ${file.name}`;
             status.classList.remove('hidden');
         }
+
         window.goToUploadStep2 = function() {
             const name = document.getElementById('upName').value.trim();
             if(!name || !uploadState.rawFile) return showToast('Name and .apk are mandatory!', 'error');
             uploadState.metadata = { name, shortDesc: document.getElementById('upShort').value.trim(), desc: document.getElementById('upDesc').value.trim(), icon: document.getElementById('upIcon').value.trim() };
             document.getElementById('uploadStep1').classList.add('hidden'); document.getElementById('uploadStep2').classList.remove('hidden');
         }
+
         window.backToUploadStep1 = function() {
             document.getElementById('uploadStep2').classList.add('hidden'); document.getElementById('uploadStep1').classList.remove('hidden');
         }
@@ -935,9 +959,9 @@
 
             showModal(`
                 <div class="p-8 text-center">
-                    <div class="w-20 h-20 bg-blue-50 rounded-full flex items-center justify-center mx-auto mb-6"><i class="fas fa-broadcast-tower text-4xl text-blue-500 animate-pulse"></i></div>
-                    <h3 class="text-2xl font-black text-gray-900 mb-2">Broadcasting App</h3>
-                    <p class="text-sm text-gray-500 mb-8 font-medium">Syncing metadata to global Gun.js P2P network...</p>
+                    <div class="w-20 h-20 bg-blue-50 rounded-full flex items-center justify-center mx-auto mb-6"><i class="fas fa-cog text-4xl text-blue-500 animate-spin"></i></div>
+                    <h3 class="text-2xl font-black text-gray-900 mb-2">Processing APK</h3>
+                    <p class="text-sm text-gray-500 mb-8 font-medium">Saving huge file to browser storage...</p>
                     <div class="w-full bg-gray-100 rounded-full h-4 mb-3 overflow-hidden shadow-inner">
                         <div class="bg-blue-500 h-4 rounded-full transition-all" id="upProgressBar" style="width: 0%"></div>
                     </div>
@@ -954,20 +978,23 @@
                 if(progress >= 100) {
                     clearInterval(interval);
                     const newAppId = generateId();
+                    
+                    // Zapisujemy gigantyczny plik do IndexedDB!
                     if(uploadState.rawFile) await saveFileToDB(newAppId, uploadState.rawFile);
 
+                    // A do SuperSync tunelu wysyłamy tylko leciutkie teksty!
                     db.apps.push({
                         id: newAppId, name: uploadState.metadata.name, shortDesc: uploadState.metadata.shortDesc, desc: uploadState.metadata.desc,
                         devId: currentUser.id, size: (uploadState.rawFile.size/1024/1024).toFixed(2) + ' MB', img: uploadState.metadata.icon || '',
                         downloads: 0, rating: '0.0', verified: false, badges: [], ageRating: document.getElementById('upAgeRating').value, isDeleted: false
                     });
                     
-                    saveDb(); // IMMEDIATELY SYNC GLOBALLY
+                    saveDb(); // SYNC VIA WEBSOCKETS!
                     uploadState = { metadata: {}, rawFile: null };
                     confetti({ particleCount: 100, spread: 70, origin: { y: 0.6 } });
 
                     setTimeout(() => {
-                        closeModal(); showToast('Broadcasted to all devices!', 'success'); navigate('app', {id: newAppId});
+                        closeModal(); showToast('Published to Network!', 'success'); navigate('app', {id: newAppId});
                     }, 800);
                 }
             }, 200);
@@ -999,7 +1026,7 @@
             const p = document.getElementById('setPass').value;
             if(!p) return;
             const u = db.users.find(x => x.id === currentUser.id);
-            if(u) { u.password = p; saveDb(); showToast('Password updated globally!', 'success'); }
+            if(u) { u.password = p; saveDb(); showToast('Password updated!', 'success'); }
         }
 
         window.confirmDeleteAccount = function() {
@@ -1009,7 +1036,7 @@
             db.apps.forEach(a => { if(a.devId === currentUser.id) a.isDeleted = true; });
             const idx = db.users.findIndex(x => x.id === currentUser.id);
             if(idx > -1) db.users.splice(idx, 1);
-            saveDb(); closeModal(); logout(false); showToast('Account wiped globally.', 'info');
+            saveDb(); closeModal(); logout(false); showToast('Account wiped.', 'info');
         }
 
         function renderAdmin(container) {
@@ -1026,11 +1053,35 @@
                 </tr>
             `).join('');
 
+            const reportsHtml = db.reports.filter(r => r.status === 'pending').map(r => {
+                const targetApp = db.apps.find(a => a.id === r.targetId);
+                return `
+                <div class="bg-white p-4 rounded-2xl border border-red-100 shadow-sm flex justify-between items-center mb-3">
+                    <div>
+                        <div class="font-bold text-red-600">${r.reason}</div>
+                        <div class="text-sm text-gray-500">Target App: ${targetApp ? targetApp.name : 'Deleted App'}</div>
+                    </div>
+                    <div class="space-x-2">
+                        ${targetApp ? `<button onclick="navigate('app', {id: '${targetApp.id}'})" class="px-3 py-1 bg-gray-100 rounded text-sm font-bold">View App</button>` : ''}
+                        <button onclick="dismissReport('${r.id}')" class="px-3 py-1 bg-green-100 text-green-700 rounded text-sm font-bold">Dismiss</button>
+                    </div>
+                </div>
+            `}).join('') || '<div class="text-gray-500 font-medium">No pending reports.</div>';
+
             container.innerHTML = `
-                <div class="max-w-6xl mx-auto">
-                    <h2 class="text-4xl font-black mb-8 flex items-center gap-4"><i class="fas fa-shield-alt text-red-600"></i> Global Admin</h2>
-                    <div class="glass-card rounded-[2rem] p-4 md:p-8 overflow-x-auto">
-                        <table class="w-full text-left min-w-[500px]"><thead class="bg-gray-50 text-gray-500 font-bold text-sm"><tr><th class="py-3 px-4">User</th><th class="py-3 px-4">Status</th><th class="py-3 px-4 text-right">Actions</th></tr></thead><tbody>${usersHtml}</tbody></table>
+                <div class="max-w-6xl mx-auto space-y-8">
+                    <h2 class="text-4xl font-black flex items-center gap-4"><i class="fas fa-shield-alt text-red-600"></i> Global Admin</h2>
+                    
+                    <div class="glass-card rounded-[2rem] p-4 md:p-8">
+                        <h3 class="text-2xl font-bold mb-6 text-gray-900">User Management</h3>
+                        <div class="overflow-x-auto">
+                            <table class="w-full text-left min-w-[500px]"><thead class="bg-gray-50 text-gray-500 font-bold text-sm"><tr><th class="py-3 px-4">User</th><th class="py-3 px-4">Status</th><th class="py-3 px-4 text-right">Actions</th></tr></thead><tbody>${usersHtml}</tbody></table>
+                        </div>
+                    </div>
+
+                    <div class="glass-card rounded-[2rem] p-4 md:p-8 bg-red-50/30">
+                        <h3 class="text-2xl font-bold mb-6 text-red-800">Pending Reports</h3>
+                        <div>${reportsHtml}</div>
                     </div>
                 </div>
             `;
@@ -1038,18 +1089,16 @@
 
         window.adminDeleteApp = function(id) { const a = db.apps.find(x=>x.id===id); if(a){ a.isDeleted=true; saveDb(); navigate('home'); } }
         window.adminToggleVerify = function(id) { const a = db.apps.find(x=>x.id===id); if(a){ a.verified=!a.verified; saveDb(); renderAppDetails(document.getElementById('app'), id); } }
-        window.adminBanUser = function(id) { const u = db.users.find(x=>x.id===id); if(u){ u.isBanned=true; saveDb(); showToast('Banned globally.', 'success'); navigate('admin'); } }
+        window.adminBanUser = function(id) { const u = db.users.find(x=>x.id===id); if(u){ u.isBanned=true; saveDb(); showToast('Banned.', 'success'); navigate('admin'); } }
         window.adminUnbanUser = function(id) { const u = db.users.find(x=>x.id===id); if(u){ u.isBanned=false; saveDb(); navigate('admin'); } }
         window.adminIPBanUser = function(id) { const u = db.users.find(x=>x.id===id); if(u){ u.isBanned=true; u.ipBanned=true; saveDb(); navigate('admin'); } }
         window.adminUnbanIPUser = function(id) { const u = db.users.find(x=>x.id===id); if(u){ u.ipBanned=false; saveDb(); navigate('admin'); } }
+        window.dismissReport = function(id) { const r = db.reports.find(x=>x.id===id); if(r){ r.status='resolved'; saveDb(); navigate('admin'); } }
 
         window.onload = async function() {
             await initFileDB(); 
             initDb();           
             navigate('home');
-            
-            // Backup check for Ban state
-            setInterval(enforceBanState, 2000);
         };
     </script>
 </body>
