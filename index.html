@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Superdownloader</title>
     <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
@@ -10,89 +10,81 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <!-- Google Fonts -->
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <!-- PeerJS for TRUE P2P Networking -->
+    <script src="https://unpkg.com/peerjs@1.5.2/dist/peerjs.min.js"></script>
+    
     <style>
         body {
             font-family: 'Inter', sans-serif;
             background-color: #f8fafc;
             color: #0f172a;
             overflow-x: hidden;
+            width: 100vw;
         }
         
         /* Custom Scrollbar for Play Store feel */
-        ::-webkit-scrollbar { width: 8px; }
+        ::-webkit-scrollbar { width: 6px; height: 6px; }
         ::-webkit-scrollbar-track { background: transparent; }
         ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 10px; }
         ::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
 
-        .app-card {
-            transition: all 0.2s ease;
-        }
+        .app-card { transition: all 0.2s ease; }
         .app-card:hover {
             transform: translateY(-4px);
             box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.1);
         }
 
         /* Animations */
-        @keyframes slideInUp {
-            from { transform: translateY(20px); opacity: 0; }
-            to { transform: translateY(0); opacity: 1; }
-        }
+        @keyframes slideInUp { from { transform: translateY(20px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
         .animate-slide-up { animation: slideInUp 0.3s ease forwards; }
 
-        @keyframes fadeIn {
-            from { opacity: 0; }
-            to { opacity: 1; }
-        }
+        @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
         .animate-fade-in { animation: fadeIn 0.2s ease forwards; }
-
-        /* Loader */
-        .loader {
-            border: 3px solid #f3f3f3;
-            border-top: 3px solid #10b981;
-            border-radius: 50%;
-            width: 24px;
-            height: 24px;
-            animation: spin 1s linear infinite;
-        }
-        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+        
+        .hide-scrollbar::-webkit-scrollbar { display: none; }
+        .hide-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
     </style>
 </head>
-<body class="bg-gray-50 flex flex-col min-h-screen">
+<body class="bg-gray-50 flex flex-col min-h-screen w-full">
 
-    <nav class="bg-white shadow-sm border-b border-gray-100 sticky top-0 z-40">
-        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-            <div class="flex justify-between h-16 items-center">
+    <nav class="bg-white shadow-sm border-b border-gray-100 sticky top-0 z-40 w-full">
+        <div class="max-w-7xl mx-auto px-2 sm:px-4 lg:px-8">
+            <div class="flex justify-between h-16 items-center gap-2">
                 
                 <!-- Logo -->
-                <div class="flex items-center cursor-pointer" onclick="ui.switchView('home')">
-                    <div class="w-10 h-10 bg-gradient-to-br from-emerald-400 to-emerald-600 rounded-xl flex items-center justify-center shadow-lg transform rotate-3">
-                        <i class="fa-solid fa-download text-white text-xl -rotate-3"></i>
+                <div class="flex items-center cursor-pointer flex-shrink-0" onclick="ui.switchView('home')">
+                    <div class="w-8 h-8 sm:w-10 sm:h-10 bg-gradient-to-br from-emerald-400 to-emerald-600 rounded-xl flex items-center justify-center shadow-lg transform rotate-3 flex-shrink-0">
+                        <i class="fa-solid fa-download text-white text-base sm:text-xl -rotate-3"></i>
                     </div>
-                    <span class="ml-3 font-extrabold text-xl tracking-tight bg-clip-text text-transparent bg-gradient-to-r from-emerald-600 to-teal-700">
+                    <span class="ml-2 sm:ml-3 font-extrabold text-lg sm:text-xl tracking-tight bg-clip-text text-transparent bg-gradient-to-r from-emerald-600 to-teal-700 hidden md:block">
                         Superdownloader
                     </span>
                 </div>
 
                 <!-- Search Bar -->
-                <div class="flex-1 max-w-2xl px-8 hidden md:block">
-                    <div class="relative">
+                <div class="flex-1 max-w-2xl px-2">
+                    <div class="relative w-full">
                         <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
                             <i class="fa-solid fa-magnifying-glass text-gray-400"></i>
                         </div>
-                        <input type="text" id="searchInput" placeholder="Search apps & games..." class="block w-full pl-10 pr-3 py-2 border border-gray-200 rounded-full leading-5 bg-gray-50 placeholder-gray-500 focus:outline-none focus:bg-white focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 sm:text-sm transition-all" onkeypress="if(event.key === 'Enter') ui.searchApps()">
+                        <input type="text" id="searchInput" placeholder="Search apps..." class="block w-full pl-9 sm:pl-10 pr-3 py-2 border border-gray-200 rounded-full text-sm sm:text-base leading-5 bg-gray-50 placeholder-gray-500 focus:outline-none focus:bg-white focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 transition-all" onkeypress="if(event.key === 'Enter') ui.searchApps()">
                     </div>
                 </div>
 
                 <!-- Right Menu -->
-                <div class="flex items-center gap-4">
+                <div class="flex items-center gap-2 sm:gap-4 flex-shrink-0">
+                    <!-- P2P Network Button -->
+                    <button onclick="ui.openP2PModal()" class="flex items-center gap-2 text-blue-500 hover:text-blue-700 font-bold transition-colors text-sm sm:text-base px-2">
+                        <i class="fa-solid fa-network-wired"></i> <span class="hidden sm:inline" data-i18n="nav_p2p">P2P Network</span>
+                    </button>
+                    
                     <!-- Upload Button -->
-                    <button onclick="ui.goToUpload()" class="hidden sm:flex items-center gap-2 text-gray-500 hover:text-emerald-600 font-medium transition-colors">
-                        <i class="fa-solid fa-cloud-arrow-up"></i>
-                        <span id="nav_upload">Upload</span>
+                    <button onclick="ui.goToUpload()" class="hidden md:flex items-center gap-2 text-gray-500 hover:text-emerald-600 font-medium transition-colors" data-i18n="nav_upload">
+                        <i class="fa-solid fa-cloud-arrow-up"></i> Upload
                     </button>
                     
                     <!-- User Menu Container -->
-                    <div id="userMenuContainer" class="relative ml-2">
+                    <div id="userMenuContainer" class="relative">
                         <!-- Populated by JS -->
                     </div>
                 </div>
@@ -100,60 +92,61 @@
         </div>
     </nav>
 
-    <main class="flex-1 max-w-7xl mx-auto w-full px-4 sm:px-6 lg:px-8 py-8 relative">
+    <main class="flex-1 w-full max-w-7xl mx-auto px-3 sm:px-6 lg:px-8 py-4 sm:py-8 relative">
         
         <!-- VIEW: HOME -->
-        <div id="view-home" class="view-section block animate-fade-in">
-            <h2 class="text-2xl font-bold text-gray-900 mb-6" id="home_rec">Recommended for you</h2>
-            <div id="recommendedAppsGrid" class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-4 sm:gap-6">
+        <div id="view-home" class="view-section block animate-fade-in w-full">
+            <h2 class="text-xl sm:text-2xl font-bold text-gray-900 mb-3 sm:mb-6" data-i18n="home_rec">Recommended for you</h2>
+            <div id="recommendedAppsGrid" class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-3 sm:gap-6 w-full">
                 <!-- Apps loaded here -->
             </div>
 
-            <div class="mt-12 flex items-center justify-between mb-6">
-                <h2 class="text-2xl font-bold text-gray-900"><span id="home_hits">Hits</span> <span id="currentYear"></span></h2>
+            <div class="mt-8 sm:mt-12 flex items-center justify-between mb-3 sm:mb-6">
+                <h2 class="text-xl sm:text-2xl font-bold text-gray-900"><span data-i18n="home_hits">Hits</span> <span id="currentYear"></span></h2>
             </div>
-            <div id="hitsAppsGrid" class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-6">
+            <div id="hitsAppsGrid" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-6 w-full">
                 <!-- Hits loaded here -->
             </div>
         </div>
 
         <!-- VIEW: APP DETAILS -->
-        <div id="view-app" class="view-section hidden animate-fade-in">
+        <div id="view-app" class="view-section hidden animate-fade-in w-full">
             <!-- Populated by JS -->
         </div>
 
         <!-- VIEW: UPLOAD -->
-        <div id="view-upload" class="view-section hidden animate-fade-in max-w-3xl mx-auto">
-            <div class="bg-white rounded-2xl shadow-sm border border-gray-100 p-8">
-                <h2 class="text-3xl font-bold mb-2">Publish App via P2P</h2>
-                <p class="text-gray-500 mb-8">Share your application with the world securely.</p>
+        <div id="view-upload" class="view-section hidden animate-fade-in w-full max-w-3xl mx-auto">
+            <div class="bg-white rounded-2xl shadow-sm border border-gray-100 p-4 sm:p-8">
+                <h2 class="text-2xl sm:text-3xl font-bold mb-2" data-i18n="btn_publish">Publish App via Local Node</h2>
+                <p class="text-sm sm:text-base text-gray-500 mb-6 sm:mb-8">Add application to your local database to seed it via P2P.</p>
                 
-                <!-- Upload Steps UI -->
+                <!-- Upload Step 1 -->
                 <div id="uploadStep1">
-                    <div class="space-y-6">
+                    <div class="space-y-4 sm:space-y-6">
                         <div>
                             <label class="block text-sm font-semibold text-gray-700 mb-1">App Name</label>
-                            <input type="text" id="upName" class="w-full px-4 py-3 rounded-xl border border-gray-200 focus:ring-2 focus:ring-emerald-500 outline-none" placeholder="e.g. Flappy Bird">
+                            <input type="text" id="upName" class="w-full px-4 py-3 rounded-xl border border-gray-200 focus:ring-2 focus:ring-emerald-500 outline-none" placeholder="e.g. My Awesome Game">
                         </div>
                         <div>
                             <label class="block text-sm font-semibold text-gray-700 mb-1">Description (<span id="descCount">0</span>/95)</label>
                             <textarea id="upDesc" maxlength="95" rows="2" class="w-full px-4 py-3 rounded-xl border border-gray-200 focus:ring-2 focus:ring-emerald-500 outline-none resize-none" placeholder="Short and catchy description..."></textarea>
                         </div>
                         <div>
-                            <label class="block text-sm font-semibold text-gray-700 mb-1">App Icon (Image)</label>
-                            <input type="file" id="upIcon" accept="image/png, image/jpeg" class="w-full text-sm text-gray-500 file:mr-4 file:py-3 file:px-4 file:rounded-xl file:border-0 file:text-sm file:font-semibold file:bg-emerald-50 file:text-emerald-700 hover:file:bg-emerald-100 transition-all border border-gray-200 rounded-xl">
+                            <label class="block text-sm font-semibold text-gray-700 mb-1">App Icon (Image .png, .jpg)</label>
+                            <input type="file" id="upIcon" accept="image/png, image/jpeg" class="w-full text-sm text-gray-500 file:mr-4 file:py-3 file:px-4 file:rounded-xl file:border-0 file:text-sm file:font-semibold file:bg-emerald-50 file:text-emerald-700 border border-gray-200 rounded-xl">
                         </div>
                         <div>
                             <label class="block text-sm font-semibold text-gray-700 mb-1">Application File (ONLY .APK)</label>
-                            <input type="file" id="upApk" accept=".apk" class="w-full text-sm text-gray-500 file:mr-4 file:py-3 file:px-4 file:rounded-xl file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100 transition-all border border-gray-200 rounded-xl">
+                            <input type="file" id="upApk" accept=".apk" class="w-full text-sm text-gray-500 file:mr-4 file:py-3 file:px-4 file:rounded-xl file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 border border-gray-200 rounded-xl">
                         </div>
                         <button onclick="appStore.nextUploadStep(2)" class="w-full bg-gray-900 text-white font-bold py-3 rounded-xl shadow-md hover:bg-gray-800 transition-colors mt-4">Next Step</button>
                     </div>
                 </div>
 
+                <!-- Upload Step 2 -->
                 <div id="uploadStep2" class="hidden">
-                    <h3 class="text-xl font-bold mb-4">Age Rating Form (AI Powered)</h3>
-                    <div class="space-y-4 mb-6 bg-gray-50 p-6 rounded-xl border border-gray-100">
+                    <h3 class="text-lg sm:text-xl font-bold mb-4">Age Rating Form (AI Powered)</h3>
+                    <div class="space-y-3 sm:space-y-4 mb-6 bg-gray-50 p-4 sm:p-6 rounded-xl border border-gray-100 text-sm sm:text-base">
                         <label class="flex items-center gap-3"><input type="checkbox" id="qEdu" class="w-5 h-5 text-emerald-600 rounded"> <span>Educational Application</span></label>
                         <label class="flex items-center gap-3"><input type="checkbox" id="qOnline" class="w-5 h-5 text-emerald-600 rounded"> <span>Online Interactions (Chat/Multiplayer)</span></label>
                         <label class="flex items-center gap-3"><input type="checkbox" id="qBlood" class="w-5 h-5 text-emerald-600 rounded"> <span>Contains Blood or Gore</span></label>
@@ -166,30 +159,31 @@
                         <label class="flex items-center gap-3"><input type="checkbox" id="qDrugs" class="w-5 h-5 text-emerald-600 rounded"> <span>Reference to Drugs/Alcohol</span></label>
                     </div>
 
-                    <h3 class="text-xl font-bold mb-4">2-Step Verification</h3>
+                    <h3 class="text-lg sm:text-xl font-bold mb-4">2-Step Verification</h3>
                     <div class="space-y-3 mb-8">
                         <label class="flex items-center gap-3 bg-white p-4 border rounded-xl cursor-pointer hover:bg-gray-50">
                             <input type="checkbox" id="vBot" class="w-5 h-5 text-emerald-600 rounded">
-                            <span class="font-medium text-gray-700">I am not a robot</span>
+                            <span class="font-medium text-gray-700 text-sm sm:text-base">I am not a robot</span>
                         </label>
                         <label class="flex items-start gap-3 bg-white p-4 border rounded-xl cursor-pointer hover:bg-gray-50">
                             <input type="checkbox" id="vTos" class="w-6 h-6 text-emerald-600 rounded mt-1">
-                            <span class="text-sm text-gray-600 leading-relaxed">I agree to the Terms of Service. I understand that uploading viruses or malicious files will result in a permanent ban on all my accounts and IP address.</span>
+                            <span class="text-xs sm:text-sm text-gray-600 leading-relaxed">I agree to the Terms of Service. Uploading viruses will result in a permanent ban.</span>
                         </label>
                     </div>
 
-                    <div class="flex gap-3 pt-4 border-t">
-                        <button onclick="appStore.prevUploadStep()" class="px-6 py-3 bg-gray-100 text-gray-700 font-bold rounded-xl hover:bg-gray-200">Back</button>
-                        <button onclick="appStore.startUploadProcess()" id="btnSubmitApp" class="flex-1 bg-emerald-600 text-white font-bold py-3 rounded-xl shadow-md hover:bg-emerald-700 transition-colors">Publish App via P2P</button>
+                    <div class="flex flex-col sm:flex-row gap-3 pt-4 border-t">
+                        <button onclick="appStore.prevUploadStep()" class="px-6 py-3 bg-gray-100 text-gray-700 font-bold rounded-xl hover:bg-gray-200 w-full sm:w-auto">Back</button>
+                        <button onclick="appStore.startUploadProcess()" id="btnSubmitApp" class="flex-1 bg-emerald-600 text-white font-bold py-3 rounded-xl shadow-md hover:bg-emerald-700 transition-colors w-full">Publish App</button>
                     </div>
                 </div>
 
-                <div id="uploadStep3" class="hidden text-center py-12">
-                    <div class="w-20 h-20 mx-auto border-4 border-gray-100 border-t-emerald-500 rounded-full animate-spin mb-6"></div>
-                    <h2 class="text-2xl font-bold mb-2">Connecting to P2P Network...</h2>
-                    <p class="text-gray-500 mb-4">Uploading files to the decentralized network.</p>
+                <!-- Upload Step 3 (Progress) -->
+                <div id="uploadStep3" class="hidden text-center py-8 sm:py-12">
+                    <div class="w-16 h-16 sm:w-20 sm:h-20 mx-auto border-4 border-gray-100 border-t-emerald-500 rounded-full animate-spin mb-6"></div>
+                    <h2 class="text-xl sm:text-2xl font-bold mb-2">Saving to IndexedDB...</h2>
+                    <p class="text-sm sm:text-base text-gray-500 mb-4">Encrypting and storing files locally for P2P Seeding.</p>
                     <div class="w-full bg-gray-200 rounded-full h-4 mb-2 overflow-hidden">
-                        <div id="uploadProgressBar" class="bg-emerald-500 h-4 rounded-full transition-all duration-300" style="width: 0%"></div>
+                        <div id="uploadProgressBar" class="bg-emerald-500 h-4 rounded-full transition-all duration-200" style="width: 0%"></div>
                     </div>
                     <p id="uploadProgressText" class="font-bold text-emerald-600">0%</p>
                 </div>
@@ -197,12 +191,12 @@
         </div>
 
         <!-- VIEW: SETTINGS -->
-        <div id="view-settings" class="view-section hidden animate-fade-in max-w-2xl mx-auto">
-            <h2 class="text-3xl font-bold mb-8" id="settings_title">Account Settings</h2>
+        <div id="view-settings" class="view-section hidden animate-fade-in w-full max-w-2xl mx-auto">
+            <h2 class="text-2xl sm:text-3xl font-bold mb-6 sm:mb-8" data-i18n="settings_title">Account Settings</h2>
             
-            <div class="bg-white rounded-2xl shadow-sm border border-gray-100 p-8 mb-6">
+            <div class="bg-white rounded-2xl shadow-sm border border-gray-100 p-4 sm:p-8 mb-6">
                 <div class="mb-6">
-                    <label class="block text-sm font-bold text-gray-700 mb-2" id="set_lang">Language</label>
+                    <label class="block text-sm font-bold text-gray-700 mb-2" data-i18n="set_lang">Language</label>
                     <select id="langSelect" onchange="i18n.setLang(this.value)" class="w-full px-4 py-3 rounded-xl border border-gray-200 focus:ring-2 focus:ring-emerald-500 outline-none">
                         <option value="en">English (US)</option>
                         <option value="pl">Polski (PL)</option>
@@ -214,84 +208,127 @@
                 <hr class="my-6 border-gray-100">
 
                 <div class="mb-6">
-                    <label class="block text-sm font-bold text-gray-700 mb-2" id="set_user">Change Username</label>
-                    <div class="flex gap-2">
-                        <input type="text" id="setNewUsername" class="flex-1 px-4 py-2 rounded-xl border border-gray-200 focus:ring-2 focus:ring-emerald-500 outline-none" placeholder="New username">
-                        <button onclick="auth.changeUsername()" id="btnUpdateUser" class="bg-gray-900 text-white px-6 py-2 rounded-xl font-bold hover:bg-gray-800">Update</button>
+                    <label class="block text-sm font-bold text-gray-700 mb-2" data-i18n="set_user">Change Username</label>
+                    <div class="flex flex-col sm:flex-row gap-2">
+                        <input type="text" id="setNewUsername" class="flex-1 px-4 py-2 rounded-xl border border-gray-200 outline-none" placeholder="New username">
+                        <button onclick="auth.changeUsername()" class="bg-gray-900 text-white px-6 py-2 rounded-xl font-bold hover:bg-gray-800" data-i18n="btn_update">Update</button>
                     </div>
                 </div>
 
                 <div>
-                    <label class="block text-sm font-bold text-gray-700 mb-2" id="set_pass">Change Password</label>
-                    <div class="flex gap-2 mb-2">
-                        <input type="password" id="setOldPass" class="flex-1 px-4 py-2 rounded-xl border border-gray-200 focus:ring-2 focus:ring-emerald-500 outline-none" placeholder="Current password">
-                    </div>
-                    <div class="flex gap-2">
-                        <input type="password" id="setNewPass" class="flex-1 px-4 py-2 rounded-xl border border-gray-200 focus:ring-2 focus:ring-emerald-500 outline-none" placeholder="New password">
-                        <button onclick="auth.changePassword()" id="btnUpdatePass" class="bg-gray-900 text-white px-6 py-2 rounded-xl font-bold hover:bg-gray-800">Update</button>
+                    <label class="block text-sm font-bold text-gray-700 mb-2" data-i18n="set_pass">Change Password</label>
+                    <div class="flex flex-col gap-2">
+                        <input type="password" id="setOldPass" class="w-full px-4 py-2 rounded-xl border border-gray-200 outline-none" placeholder="Current password">
+                        <div class="flex flex-col sm:flex-row gap-2">
+                            <input type="password" id="setNewPass" class="flex-1 px-4 py-2 rounded-xl border border-gray-200 outline-none" placeholder="New password">
+                            <button onclick="auth.changePassword()" class="bg-gray-900 text-white px-6 py-2 rounded-xl font-bold hover:bg-gray-800" data-i18n="btn_update">Update</button>
+                        </div>
                     </div>
                 </div>
             </div>
 
-            <div class="bg-red-50 rounded-2xl border border-red-100 p-8">
+            <div class="bg-red-50 rounded-2xl border border-red-100 p-4 sm:p-8">
                 <h3 class="text-red-700 font-bold text-xl mb-2">Danger Zone</h3>
-                <p class="text-red-500 text-sm mb-4">Once you delete your account, there is no going back. Please be certain.</p>
-                <button onclick="auth.deleteAccount()" class="bg-red-600 text-white px-6 py-3 rounded-xl font-bold hover:bg-red-700 transition-colors shadow-md">Delete Account Permanently</button>
+                <p class="text-red-500 text-sm mb-4">Once you delete your account, there is no going back.</p>
+                <button onclick="auth.deleteAccount()" class="w-full sm:w-auto bg-red-600 text-white px-6 py-3 rounded-xl font-bold hover:bg-red-700 transition-colors shadow-md">Delete Account Permanently</button>
             </div>
         </div>
 
         <!-- VIEW: ADMIN PANEL -->
-        <div id="view-admin" class="view-section hidden animate-fade-in max-w-5xl mx-auto">
-            <div class="flex justify-between items-center mb-8">
-                <h2 class="text-3xl font-bold text-red-600"><i class="fa-solid fa-shield-halved mr-2"></i>Admin Panel</h2>
+        <div id="view-admin" class="view-section hidden animate-fade-in w-full max-w-5xl mx-auto">
+            <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6 gap-4">
+                <h2 class="text-2xl sm:text-3xl font-bold text-red-600" data-i18n="admin_title"><i class="fa-solid fa-shield-halved mr-2"></i>Admin Dashboard</h2>
                 <span class="bg-red-100 text-red-700 px-3 py-1 rounded-full text-sm font-bold">God Mode Active</span>
             </div>
 
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 sm:gap-8">
                 <!-- Manage Users -->
-                <div class="bg-white rounded-2xl shadow-sm border border-gray-100 p-6">
-                    <h3 class="font-bold text-xl mb-4 border-b pb-2">Manage Users</h3>
-                    <div id="adminUserList" class="space-y-3 max-h-96 overflow-y-auto pr-2">
-                        <!-- Users loaded here -->
-                    </div>
+                <div class="bg-white rounded-2xl shadow-sm border border-gray-100 p-4 sm:p-6">
+                    <h3 class="font-bold text-lg mb-4 border-b pb-2">Manage Users</h3>
+                    <div id="adminUserList" class="space-y-3 max-h-96 overflow-y-auto pr-2"></div>
                 </div>
 
                 <!-- Manage Apps -->
-                <div class="bg-white rounded-2xl shadow-sm border border-gray-100 p-6">
-                    <h3 class="font-bold text-xl mb-4 border-b pb-2">Manage Apps</h3>
-                    <div class="flex gap-2 mb-4">
-                        <input type="text" id="adminAppSearch" placeholder="Search by name or ID..." class="flex-1 px-4 py-2 rounded-xl border border-gray-200 outline-none text-sm">
-                    </div>
-                    <div id="adminAppList" class="space-y-3 max-h-80 overflow-y-auto pr-2">
-                        <!-- Apps loaded here -->
-                    </div>
+                <div class="bg-white rounded-2xl shadow-sm border border-gray-100 p-4 sm:p-6">
+                    <h3 class="font-bold text-lg mb-4 border-b pb-2">Manage Apps</h3>
+                    <input type="text" id="adminAppSearch" placeholder="Search by name..." class="w-full px-4 py-2 rounded-xl border border-gray-200 outline-none mb-4">
+                    <div id="adminAppList" class="space-y-3 max-h-80 overflow-y-auto pr-2"></div>
                 </div>
             </div>
         </div>
     </main>
 
-    <!-- Authentication Modal -->
-    <div id="authModal" class="fixed inset-0 bg-gray-900 bg-opacity-50 backdrop-blur-sm hidden items-center justify-center z-50 transition-opacity">
-        <div class="bg-white rounded-3xl shadow-2xl w-full max-w-md p-8 transform transition-transform scale-95 opacity-0" id="authModalContent">
+    
+    <!-- TRUE P2P NETWORK MODAL -->
+    <div id="p2pModal" class="fixed inset-0 bg-gray-900 bg-opacity-70 backdrop-blur-sm hidden items-center justify-center z-50 p-4">
+        <div class="bg-white rounded-3xl shadow-2xl w-full max-w-lg p-6 sm:p-8">
             <div class="flex justify-between items-center mb-6">
-                <h3 class="text-2xl font-bold text-gray-900" id="authTitle">Sign In</h3>
-                <button onclick="ui.closeModal('authModal')" class="text-gray-400 hover:text-gray-600 w-8 h-8 flex items-center justify-center rounded-full hover:bg-gray-100 transition-colors">
-                    <i class="fa-solid fa-xmark text-xl"></i>
-                </button>
+                <h3 class="text-2xl font-bold text-blue-600"><i class="fa-solid fa-network-wired mr-2"></i>P2P Network</h3>
+                <button onclick="ui.closeModal('p2pModal')" class="text-gray-400 hover:text-gray-600 w-8 h-8 flex items-center justify-center rounded-full hover:bg-gray-100"><i class="fa-solid fa-xmark text-xl"></i></button>
             </div>
             
+            <div class="bg-blue-50 border border-blue-100 rounded-xl p-4 mb-6">
+                <h4 class="font-bold text-blue-800 mb-1">Status Sieci (WebRTC)</h4>
+                <p id="p2pStatus" class="text-sm text-blue-600">Łączenie z serwerem sygnalizacyjnym...</p>
+                <div class="mt-2 text-xs text-gray-500 font-mono break-all">Mój Peer ID: <span id="myPeerId" class="font-bold text-gray-800">Czekaj...</span></div>
+            </div>
+
+            <div class="space-y-4">
+                <h4 class="font-bold text-gray-800">Pobierz aplikację bezpośrednio od kogoś</h4>
+                <p class="text-sm text-gray-500">Wpisz Peer ID osoby, która seeduje aplikację.</p>
+                <div class="flex flex-col sm:flex-row gap-2">
+                    <input type="text" id="p2pTargetId" class="flex-1 px-4 py-3 rounded-xl border border-gray-200 focus:ring-2 focus:ring-blue-500 outline-none" placeholder="Wklej Peer ID...">
+                    <button onclick="p2pNetwork.connectAndDownload()" class="bg-blue-600 text-white font-bold py-3 px-6 rounded-xl hover:bg-blue-700 shadow-md">Połącz</button>
+                </div>
+            </div>
+            
+            <!-- P2P Progress -->
+            <div id="p2pTransferArea" class="hidden mt-6 border-t pt-4">
+                <h4 class="font-bold text-gray-800 mb-2">Transfer w toku...</h4>
+                <div class="w-full bg-gray-200 rounded-full h-4 mb-2 overflow-hidden">
+                    <div id="p2pProgressBar" class="bg-blue-500 h-4 rounded-full transition-all duration-200" style="width: 0%"></div>
+                </div>
+                <p id="p2pProgressText" class="text-center font-bold text-blue-600 text-sm">Trwa negocjacja P2P...</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- P2P SEED MODAL -->
+    <div id="p2pSeedModal" class="fixed inset-0 bg-gray-900 bg-opacity-70 backdrop-blur-sm hidden items-center justify-center z-50 p-4">
+        <div class="bg-white rounded-3xl shadow-2xl w-full max-w-md p-6 text-center">
+            <div class="w-16 h-16 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-4 text-blue-600 text-2xl animate-pulse">
+                <i class="fa-solid fa-satellite-dish"></i>
+            </div>
+            <h3 class="text-2xl font-bold text-gray-900 mb-2">Seeding App</h3>
+            <p class="text-gray-500 text-sm mb-6">Wyślij ten kod osobie, która chce pobrać aplikację bezpośrednio z Twojego urządzenia (WebRTC).</p>
+            
+            <div class="bg-gray-100 p-4 rounded-xl mb-6">
+                <p class="text-xs text-gray-500 font-bold uppercase mb-1">Twój Peer ID (Share Code)</p>
+                <div id="seedPeerId" class="text-lg sm:text-xl font-mono font-bold text-gray-900 break-all select-all">Loading...</div>
+            </div>
+            
+            <p class="text-xs text-red-500 mb-6 font-bold"><i class="fa-solid fa-triangle-exclamation mr-1"></i>Nie zamykaj tej karty, dopóki znajomy nie pobierze pliku!</p>
+            <button onclick="ui.closeModal('p2pSeedModal')" class="w-full bg-gray-200 text-gray-800 font-bold py-3 rounded-xl hover:bg-gray-300">Zakończ Seeding</button>
+        </div>
+    </div>
+
+    <!-- Authentication Modal -->
+    <div id="authModal" class="fixed inset-0 bg-gray-900 bg-opacity-50 backdrop-blur-sm hidden items-center justify-center z-50 p-4">
+        <div class="bg-white rounded-3xl shadow-2xl w-full max-w-md p-6 sm:p-8">
+            <div class="flex justify-between items-center mb-6">
+                <h3 class="text-xl sm:text-2xl font-bold text-gray-900" id="authTitle">Sign In</h3>
+                <button onclick="ui.closeModal('authModal')" class="text-gray-400 hover:text-gray-600 w-8 h-8 flex items-center justify-center rounded-full"><i class="fa-solid fa-xmark text-xl"></i></button>
+            </div>
             <div class="space-y-4">
                 <div>
                     <label class="block text-sm font-medium text-gray-700 mb-1">Username</label>
-                    <input type="text" id="authUsername" class="w-full px-4 py-3 rounded-xl border border-gray-200 focus:ring-2 focus:ring-emerald-500 outline-none transition-all" placeholder="Enter your username">
+                    <input type="text" id="authUsername" class="w-full px-4 py-3 rounded-xl border border-gray-200 focus:ring-2 focus:ring-emerald-500 outline-none" placeholder="Enter username">
                 </div>
                 <div>
                     <label class="block text-sm font-medium text-gray-700 mb-1">Password</label>
-                    <input type="password" id="authPassword" class="w-full px-4 py-3 rounded-xl border border-gray-200 focus:ring-2 focus:ring-emerald-500 outline-none transition-all" placeholder="••••••••">
+                    <input type="password" id="authPassword" class="w-full px-4 py-3 rounded-xl border border-gray-200 focus:ring-2 focus:ring-emerald-500 outline-none" placeholder="••••••••">
                 </div>
-                
-                <button onclick="auth.handleAuthSubmit()" id="authSubmitBtn" class="w-full bg-emerald-600 text-white font-bold py-3 rounded-xl shadow-md hover:bg-emerald-700 transition-colors mt-2">Sign In</button>
-                
+                <button onclick="auth.handleAuthSubmit()" id="authSubmitBtn" class="w-full bg-emerald-600 text-white font-bold py-3 rounded-xl shadow-md hover:bg-emerald-700">Sign In</button>
                 <div class="text-center mt-4">
                     <p class="text-sm text-gray-500">
                         <span id="authToggleText">Don't have an account?</span> 
@@ -302,155 +339,224 @@
         </div>
     </div>
 
-    <!-- Toast Notification Container -->
-    <div id="toastContainer" class="fixed bottom-4 right-4 z-50 flex flex-col gap-2"></div>
+    <!-- Toast Container -->
+    <div id="toastContainer" class="fixed bottom-4 right-4 sm:bottom-6 sm:right-6 z-50 flex flex-col gap-2 max-w-[90vw] sm:max-w-md"></div>
 
     <script>
-        // --- 1. IndexedDB Wrapper (No limit local storage) ---
+        // --- 1. Database (IndexedDB) ---
+        // Pozwala na zapis dużych plików i zachowanie sesji na zawsze!
         const dbHelper = {
             db: null,
-            async init() {
+            init() {
                 return new Promise((resolve, reject) => {
-                    const request = indexedDB.open('SuperdownloaderDB', 1);
-                    request.onupgradeneeded = (event) => {
-                        const db = event.target.result;
-                        if (!db.objectStoreNames.contains('data')) {
-                            db.createObjectStore('data');
+                    const req = indexedDB.open('SuperDownloaderDB_v2', 2);
+                    req.onupgradeneeded = (e) => {
+                        const db = e.target.result;
+                        if (!db.objectStoreNames.contains('store')) {
+                            db.createObjectStore('store');
                         }
                     };
-                    request.onsuccess = (event) => {
-                        this.db = event.target.result;
-                        resolve();
-                    };
-                    request.onerror = (event) => reject(event.target.error);
+                    req.onsuccess = (e) => { this.db = e.target.result; resolve(); };
+                    req.onerror = (e) => reject(e.target.error);
                 });
             },
-            async get(key) {
-                return new Promise((resolve, reject) => {
-                    const transaction = this.db.transaction(['data'], 'readonly');
-                    const store = transaction.objectStore('data');
-                    const request = store.get(key);
-                    request.onsuccess = () => resolve(request.result);
-                    request.onerror = () => reject(request.error);
+            read() {
+                return new Promise((resolve) => {
+                    const tx = this.db.transaction(['store'], 'readonly');
+                    const req = tx.objectStore('store').get('mainData');
+                    req.onsuccess = () => resolve(req.result);
+                    req.onerror = () => resolve(null);
                 });
             },
-            async set(key, value) {
+            write(data) {
                 return new Promise((resolve, reject) => {
-                    const transaction = this.db.transaction(['data'], 'readwrite');
-                    const store = transaction.objectStore('data');
-                    const request = store.put(value, key);
-                    request.onsuccess = () => resolve();
-                    request.onerror = () => reject(request.error);
+                    const tx = this.db.transaction(['store'], 'readwrite');
+                    const req = tx.objectStore('store').put(data, 'mainData');
+                    req.onsuccess = () => resolve();
+                    req.onerror = () => reject();
                 });
             }
         };
 
-        // --- 2. State & Session ---
+        // --- 2. State & Data ---
         let state = {
             currentUser: null,
             currentView: 'home',
             activeAppId: null,
             tempUploadData: {},
             selectedStars: 0,
-            isAdminActive: false,
-            data: {
-                users: [],
-                apps: [],
-                bannedIPs: [] // Simulated
-            }
+            isAdminActive: false
         };
 
-        // --- 3. i18n (Language System) ---
+        let data = {
+            users: [],
+            apps: [],
+            bannedIPs: []
+        };
+
+        // --- 3. Translation System ---
         const i18n = {
-            currentLang: 'en',
+            currentLang: localStorage.getItem('sd_lang') || 'en',
             langs: {
-                en: {
-                    search_ph: "Search apps & games...", nav_upload: "Upload", home_rec: "Recommended for you", home_hits: "Hits",
-                    btn_download: "Download", btn_play: "Play", reviews_title: "Ratings and reviews", similar_apps: "Similar apps",
-                    set_title: "Account Settings", set_lang: "Language", set_user: "Change Username", set_pass: "Change Password",
-                    btn_update: "Update", no_files: "No files available", admin_panel: "Admin Panel"
-                },
                 pl: {
-                    search_ph: "Szukaj aplikacji i gier...", nav_upload: "Prześlij", home_rec: "Polecane dla Ciebie", home_hits: "Hity",
-                    btn_download: "Pobierz", btn_play: "Graj", reviews_title: "Oceny i recenzje", similar_apps: "Podobne aplikacje",
-                    set_title: "Ustawienia Konta", set_lang: "Język", set_user: "Zmień nazwę", set_pass: "Zmień hasło",
-                    btn_update: "Aktualizuj", no_files: "Brak plików", admin_panel: "Panel Administratora"
+                    settings_title: "Ustawienia Konta", set_lang: "Język / Language", set_user: "Zmień nazwę", set_pass: "Zmień hasło",
+                    btn_update: "Aktualizuj", nav_upload: "Prześlij", nav_p2p: "Sieć P2P", search_ph: "Szukaj aplikacji...", 
+                    home_rec: "Polecane dla Ciebie", home_hits: "Hity", btn_download: "Pobierz", btn_play: "Zagraj", 
+                    reviews_title: "Oceny i recenzje", similar_apps: "Podobne", btn_publish: "Opublikuj", admin_title: "Panel Administratora"
                 },
-                es: {
-                    search_ph: "Buscar aplicaciones...", nav_upload: "Subir", home_rec: "Recomendado para ti", home_hits: "Éxitos",
-                    btn_download: "Descargar", btn_play: "Jugar", reviews_title: "Reseñas", similar_apps: "Aplicaciones similares",
-                    set_title: "Configuración", set_lang: "Idioma", set_user: "Cambiar usuario", set_pass: "Cambiar contraseña",
-                    btn_update: "Actualizar", no_files: "Sin archivos", admin_panel: "Panel de Admin"
-                },
-                de: {
-                    search_ph: "Suchen...", nav_upload: "Hochladen", home_rec: "Empfohlen", home_hits: "Hits",
-                    btn_download: "Herunterladen", btn_play: "Spielen", reviews_title: "Rezensionen", similar_apps: "Ähnliche Apps",
-                    set_title: "Einstellungen", set_lang: "Sprache", set_user: "Benutzername ändern", set_pass: "Passwort ändern",
-                    btn_update: "Aktualisieren", no_files: "Keine Dateien", admin_panel: "Admin-Panel"
+                en: {
+                    settings_title: "Account Settings", set_lang: "Language / Język", set_user: "Change Username", set_pass: "Change Password",
+                    btn_update: "Update", nav_upload: "Upload", nav_p2p: "P2P Network", search_ph: "Search apps...", 
+                    home_rec: "Recommended for you", home_hits: "Hits", btn_download: "Download", btn_play: "Play", 
+                    reviews_title: "Ratings and reviews", similar_apps: "Similar apps", btn_publish: "Publish App", admin_title: "Admin Dashboard"
                 }
-            },
-            init() {
-                const saved = localStorage.getItem('sd_lang');
-                if(saved && this.langs[saved]) this.currentLang = saved;
-                const sel = document.getElementById('langSelect');
-                if(sel) sel.value = this.currentLang;
-                this.updateDOM();
-            },
-            t(key) {
-                return this.langs[this.currentLang][key] || key;
             },
             setLang(lang) {
-                if(this.langs[lang]) {
-                    this.currentLang = lang;
-                    localStorage.setItem('sd_lang', lang);
-                    this.updateDOM();
-                    ui.showToast(lang === 'pl' ? 'Zmieniono język' : 'Language changed', 'success');
-                    ui.switchView(state.currentView, state.activeAppId); // Refresh view
-                }
+                this.currentLang = lang;
+                localStorage.setItem('sd_lang', lang);
+                this.updateDOM();
+                ui.showToast(lang === 'pl' ? 'Zmieniono język' : 'Language changed', 'info');
+                ui.switchView(state.currentView, state.activeAppId);
             },
+            t(key) { return this.langs[this.currentLang]?.[key] || this.langs['en'][key] || key; },
             updateDOM() {
-                const setEl = (id, key) => { const el = document.getElementById(id); if(el) el.innerText = this.t(key); };
-                setEl('nav_upload', 'nav_upload');
-                setEl('home_rec', 'home_rec');
-                const hitsEl = document.getElementById('home_hits'); if(hitsEl) hitsEl.innerText = this.t('home_hits');
-                setEl('settings_title', 'set_title');
-                setEl('set_lang', 'set_lang');
-                setEl('set_user', 'set_user');
-                setEl('set_pass', 'set_pass');
-                setEl('btnUpdateUser', 'btn_update');
-                setEl('btnUpdatePass', 'btn_update');
-                
-                const search = document.getElementById('searchInput');
-                if(search) search.placeholder = this.t('search_ph');
+                document.querySelectorAll('[data-i18n]').forEach(el => {
+                    const key = el.getAttribute('data-i18n');
+                    const icon = el.querySelector('i');
+                    if(icon) { el.innerHTML = ''; el.appendChild(icon); el.append(' ' + this.t(key)); } 
+                    else { el.innerText = this.t(key); }
+                });
+                const s = document.getElementById('searchInput'); if(s) s.placeholder = this.t('search_ph');
+                const ls = document.getElementById('langSelect'); if(ls) ls.value = this.currentLang;
             }
         };
 
-        // --- 4. Core System & UI ---
+        // --- STREAMING_CHUNK:P2P WebRTC Network Engine... ---
+        const p2pNetwork = {
+            peer: null,
+            myId: null,
+            currentSeedingApp: null,
+
+            init() {
+                // Initialize TRUE P2P using PeerJS public signaling server
+                this.peer = new Peer('sd-' + Math.random().toString(36).substr(2, 8));
+                
+                this.peer.on('open', (id) => {
+                    this.myId = id;
+                    const statusEl = document.getElementById('p2pStatus');
+                    const idEl = document.getElementById('myPeerId');
+                    const seedIdEl = document.getElementById('seedPeerId');
+                    
+                    if(statusEl) {
+                        statusEl.innerText = "Połączono z serwerem. Gotowy na P2P!";
+                        statusEl.classList.replace('text-blue-600', 'text-green-600');
+                    }
+                    if(idEl) idEl.innerText = id;
+                    if(seedIdEl) seedIdEl.innerText = id;
+                    
+                    ui.showToast("Sieć P2P (WebRTC) aktywna!", "success");
+                });
+
+                // Listen for incoming P2P connections (when we are SEEDING)
+                this.peer.on('connection', (conn) => {
+                    conn.on('data', (request) => {
+                        if(request.type === 'GIMME_APP' && this.currentSeedingApp) {
+                            ui.showToast("Ktoś pobiera od ciebie plik przez P2P!", "info");
+                            // Send the entire application object (includes Base64 APK/Icon) directly browser-to-browser
+                            conn.send({
+                                type: 'APP_DATA',
+                                payload: this.currentSeedingApp
+                            });
+                        }
+                    });
+                });
+
+                this.peer.on('error', (err) => {
+                    console.error(err);
+                    ui.showToast("P2P Error: " + err.type, "error");
+                });
+            },
+
+            startSeeding(appId) {
+                const app = data.apps.find(a => a.id === appId);
+                if(!app) return ui.showToast("Nie znaleziono aplikacji lokalnie.", "error");
+                if(!app.apkFile) return ui.showToast("Brak pliku .apk do wysłania.", "error");
+
+                this.currentSeedingApp = app;
+                ui.openModal('p2pSeedModal');
+            },
+
+            connectAndDownload() {
+                const targetId = document.getElementById('p2pTargetId').value.trim();
+                if(!targetId) return ui.showToast("Wpisz Peer ID!", "error");
+                if(targetId === this.myId) return ui.showToast("Nie możesz połączyć się ze sobą!", "error");
+
+                document.getElementById('p2pTransferArea').classList.remove('hidden');
+                document.getElementById('p2pProgressText').innerText = "Nawiązywanie połączenia P2P...";
+                
+                // Establish connection
+                const conn = this.peer.connect(targetId, { reliable: true });
+
+                conn.on('open', () => {
+                    document.getElementById('p2pProgressText').innerText = "Połączono. Żądanie pliku...";
+                    // Simulate loading bar for UX
+                    let p = 0;
+                    const int = setInterval(() => {
+                        p += 15; if(p>90) p = 90;
+                        document.getElementById('p2pProgressBar').style.width = p + '%';
+                    }, 200);
+
+                    // Ask peer for the app
+                    conn.send({ type: 'GIMME_APP' });
+
+                    conn.on('data', async (response) => {
+                        if(response.type === 'APP_DATA') {
+                            clearInterval(int);
+                            document.getElementById('p2pProgressBar').style.width = '100%';
+                            document.getElementById('p2pProgressText').innerText = "Pobrano plik P2P! Zapisywanie...";
+                            
+                            const receivedApp = response.payload;
+                            
+                            // Check if we already have it
+                            const exists = data.apps.find(a => a.id === receivedApp.id);
+                            if(!exists) {
+                                data.apps.push(receivedApp);
+                                await dbHelper.write(data);
+                            }
+                            
+                            setTimeout(() => {
+                                ui.closeModal('p2pModal');
+                                ui.showToast("Aplikacja pobrana przez P2P!", "success");
+                                ui.switchView('app', receivedApp.id);
+                            }, 1000);
+                        }
+                    });
+                });
+
+                conn.on('error', () => {
+                    ui.showToast("Nie udało się połączyć P2P.", "error");
+                    document.getElementById('p2pTransferArea').classList.add('hidden');
+                });
+            }
+        };
+
+        // --- STREAMING_CHUNK:UI Management... ---
         const ui = {
-            formatNumber(num) {
-                if (num >= 1000000000) return (num / 1000000000).toFixed(1).replace(/\.0$/, '') + 'b';
-                if (num >= 1000000) return (num / 1000000).toFixed(1).replace(/\.0$/, '') + 'mln';
-                if (num >= 1000) return (num / 1000).toFixed(1).replace(/\.0$/, '') + 'k';
+            formatNum(num) {
+                if (num >= 1e9) return (num / 1e9).toFixed(1) + 'b';
+                if (num >= 1e6) return (num / 1e6).toFixed(1) + 'm';
+                if (num >= 1000) return (num / 1000).toFixed(1) + 'k';
                 return num;
             },
             showToast(msg, type = 'info') {
-                const container = document.getElementById('toastContainer');
-                const toast = document.createElement('div');
-                const colors = {
-                    success: 'bg-emerald-500', error: 'bg-red-500', info: 'bg-blue-500', warning: 'bg-yellow-500'
-                };
-                const icons = {
-                    success: 'fa-check-circle', error: 'fa-circle-exclamation', info: 'fa-info-circle', warning: 'fa-triangle-exclamation'
-                };
-                
-                toast.className = `${colors[type]} text-white px-6 py-3 rounded-xl shadow-lg flex items-center gap-3 animate-slide-up transition-all duration-300 transform`;
-                toast.innerHTML = `<i class="fa-solid ${icons[type]} text-lg"></i><span class="font-medium">${msg}</span>`;
-                
-                container.appendChild(toast);
-                setTimeout(() => {
-                    toast.classList.add('opacity-0', 'translate-y-4');
-                    setTimeout(() => toast.remove(), 300);
-                }, 3000);
+                const c = document.getElementById('toastContainer');
+                const t = document.createElement('div');
+                const cols = { success: 'bg-emerald-500', error: 'bg-red-500', info: 'bg-blue-500' };
+                const icons = { success: 'fa-check-circle', error: 'fa-circle-exclamation', info: 'fa-info-circle' };
+                t.className = `${cols[type]} text-white px-4 py-3 rounded-xl shadow-lg flex items-center gap-3 animate-slide-up text-sm sm:text-base`;
+                t.innerHTML = `<i class="fa-solid ${icons[type]} text-lg"></i><span class="font-medium">${msg}</span>`;
+                c.appendChild(t);
+                setTimeout(() => { t.classList.add('opacity-0'); setTimeout(() => t.remove(), 300); }, 3000);
             },
             switchView(viewName, appId = null) {
                 document.querySelectorAll('.view-section').forEach(el => el.classList.add('hidden'));
@@ -458,20 +564,19 @@
                 if (view) {
                     view.classList.remove('hidden');
                     state.currentView = viewName;
-                    
                     if (viewName === 'home') appStore.renderApps();
-                    if (viewName === 'app' && appId) {
-                        state.activeAppId = appId;
-                        appStore.renderAppDetails(appId);
-                    }
+                    if (viewName === 'app' && appId) { state.activeAppId = appId; appStore.renderAppDetails(appId); }
                     if (viewName === 'admin') admin.render();
                     if (viewName === 'upload') appStore.resetUpload();
                 }
                 window.scrollTo({ top: 0, behavior: 'smooth' });
             },
-            goToUpload() {
-                if(auth.requireLogin()) this.switchView('upload');
-            },
+            goToUpload() { if(auth.requireLogin()) this.switchView('upload'); },
+            openModal(id) { document.getElementById(id).classList.replace('hidden', 'flex'); },
+            closeModal(id) { document.getElementById(id).classList.replace('flex', 'hidden'); },
+            openP2PModal() { this.openModal('p2pModal'); },
+            
+            // Fixed Menu Logic (Click based)
             toggleUserMenu() {
                 const menu = document.getElementById('userDropdownMenu');
                 if (menu) menu.classList.toggle('hidden');
@@ -481,70 +586,51 @@
                 if (state.currentUser) {
                     c.innerHTML = `
                         <div class="relative">
-                            <button onclick="ui.toggleUserMenu(); event.stopPropagation();" class="flex items-center gap-2 bg-gray-100 hover:bg-gray-200 px-4 py-2 rounded-full font-bold transition-colors">
+                            <button id="userProfileBtn" onclick="ui.toggleUserMenu(); event.stopPropagation();" class="flex items-center gap-2 bg-gray-100 hover:bg-gray-200 px-3 py-2 rounded-full font-bold transition-colors">
                                 <div class="w-7 h-7 bg-emerald-500 rounded-full text-white flex items-center justify-center text-xs">${state.currentUser.username[0].toUpperCase()}</div>
-                                <span class="hidden sm:block">${state.currentUser.username}</span>
+                                <span class="hidden sm:block text-sm">${state.currentUser.username}</span>
                             </button>
-                            <div id="userDropdownMenu" class="absolute right-0 mt-2 w-48 bg-white border border-gray-100 rounded-xl shadow-xl py-2 hidden transition-all z-50">
-                                ${state.isAdminActive ? `<button onclick="ui.switchView('admin'); ui.toggleUserMenu()" class="w-full text-left px-4 py-2 hover:bg-gray-50 text-red-600 font-bold"><i class="fa-solid fa-shield-halved mr-2"></i>${i18n.t('admin_panel')}</button>` : ''}
-                                <button onclick="ui.switchView('settings'); ui.toggleUserMenu()" class="w-full text-left px-4 py-2 hover:bg-gray-50 text-gray-700 font-medium"><i class="fa-solid fa-gear mr-2"></i>${i18n.t('set_title')}</button>
-                                <hr class="my-2 border-gray-50">
-                                <button onclick="auth.logout()" class="w-full text-left px-4 py-2 hover:bg-gray-50 text-red-500 font-medium"><i class="fa-solid fa-right-from-bracket mr-2"></i>Logout</button>
+                            <div id="userDropdownMenu" class="absolute right-0 mt-2 w-48 bg-white border border-gray-100 rounded-xl shadow-xl py-2 hidden z-50">
+                                <button onclick="ui.goToUpload(); ui.toggleUserMenu()" class="w-full text-left px-4 py-2 hover:bg-gray-50 text-emerald-600 md:hidden"><i class="fa-solid fa-cloud-arrow-up mr-2"></i>Upload App</button>
+                                ${state.isAdminActive ? `<button onclick="ui.switchView('admin'); ui.toggleUserMenu()" class="w-full text-left px-4 py-2 hover:bg-gray-50 text-red-600 font-bold"><i class="fa-solid fa-shield-halved mr-2"></i>Admin Panel</button>` : ''}
+                                <button onclick="ui.switchView('settings'); ui.toggleUserMenu()" class="w-full text-left px-4 py-2 hover:bg-gray-50"><i class="fa-solid fa-gear mr-2"></i>Settings</button>
+                                <hr class="my-1 border-gray-100">
+                                <button onclick="auth.logout(); ui.toggleUserMenu()" class="w-full text-left px-4 py-2 hover:bg-gray-50 text-red-500"><i class="fa-solid fa-right-from-bracket mr-2"></i>Logout</button>
                             </div>
                         </div>
                     `;
                 } else {
-                    c.innerHTML = `<button onclick="ui.openModal('authModal')" class="bg-gray-900 text-white px-5 py-2 rounded-full font-bold hover:bg-gray-800 shadow-md">Sign In</button>`;
+                    c.innerHTML = `<button onclick="ui.openModal('authModal')" class="bg-gray-900 text-white px-4 py-2 rounded-full font-bold hover:bg-gray-800 text-sm">Sign In</button>`;
                 }
-            },
-            openModal(id) {
-                const modal = document.getElementById(id);
-                const content = document.getElementById(id + 'Content');
-                modal.classList.remove('hidden');
-                modal.classList.add('flex');
-                setTimeout(() => {
-                    content.classList.remove('scale-95', 'opacity-0');
-                    content.classList.add('scale-100', 'opacity-100');
-                }, 10);
-            },
-            closeModal(id) {
-                const modal = document.getElementById(id);
-                const content = document.getElementById(id + 'Content');
-                content.classList.remove('scale-100', 'opacity-100');
-                content.classList.add('scale-95', 'opacity-0');
-                setTimeout(() => {
-                    modal.classList.add('hidden');
-                    modal.classList.remove('flex');
-                }, 200);
             },
             searchApps() {
-                const query = document.getElementById('searchInput').value.toLowerCase();
-                if(query) {
+                const q = document.getElementById('searchInput').value.toLowerCase();
+                if(q) {
                     this.switchView('home');
-                    const filtered = state.data.apps.filter(a => a.name.toLowerCase().includes(query) && !a.isDeleted);
                     const grid = document.getElementById('recommendedAppsGrid');
                     grid.innerHTML = '';
-                    if(filtered.length === 0) grid.innerHTML = `<p class="col-span-full text-center text-gray-500 py-8">No results found.</p>`;
-                    filtered.forEach(app => grid.appendChild(appStore.createAppCard(app)));
-                    document.getElementById('hitsAppsGrid').innerHTML = ''; // Clear hits on search
-                } else {
-                    appStore.renderApps();
-                }
+                    const f = data.apps.filter(a => a.name.toLowerCase().includes(q) && !a.isDeleted);
+                    if(!f.length) grid.innerHTML = `<p class="col-span-full text-center text-gray-500 py-8">No results.</p>`;
+                    f.forEach(a => grid.appendChild(appStore.createCard(a)));
+                    document.getElementById('hitsAppsGrid').innerHTML = ''; 
+                } else appStore.renderApps();
             }
         };
 
-        // --- 5. Authentication ---
+        // --- STREAMING_CHUNK:Auth & Session Management... ---
         const auth = {
             isLoginMode: true,
             async checkAdmin(hash) {
-                if (hash === '#7319112' && state.currentUser) {
-                    state.isAdminActive = true;
-                    let u = state.data.users.find(u => u.id === state.currentUser.id);
-                    if(u) u.isAdmin = true;
-                    await dbHelper.set('mainData', state.data);
-                    ui.showToast('Administrator privileges granted!', 'success');
-                    ui.updateMenu();
-                    window.location.hash = ''; // Clear hash
+                if (hash === '#7319112') {
+                    if (state.currentUser) {
+                        state.isAdminActive = true;
+                        let u = data.users.find(x => x.id === state.currentUser.id);
+                        if(u) u.isAdmin = true;
+                        await dbHelper.write(data);
+                        ui.showToast('Administrator privileges granted!', 'success');
+                        ui.updateMenu();
+                        history.replaceState(null, null, ' ');
+                    } else ui.showToast('Zaloguj się najpierw (Admin)!', 'error');
                 }
             },
             toggleAuthMode() {
@@ -555,429 +641,317 @@
                 document.getElementById('authToggleBtn').innerText = this.isLoginMode ? 'Register' : 'Login';
             },
             async handleAuthSubmit() {
-                const userVal = document.getElementById('authUsername').value.trim();
-                const passVal = document.getElementById('authPassword').value;
+                const uVal = document.getElementById('authUsername').value.trim();
+                const pVal = document.getElementById('authPassword').value;
 
-                if (userVal.length < 3 || passVal.length < 4) {
-                    return ui.showToast('Username min 3 chars, Password min 4 chars.', 'error');
-                }
+                if (uVal.length < 3 || pVal.length < 4) return ui.showToast('User >3, Pass >4 chars.', 'error');
 
                 if (this.isLoginMode) {
-                    // Login
-                    const user = state.data.users.find(u => u.username.toLowerCase() === userVal.toLowerCase() && u.password === passVal);
-                    if (user) {
-                        if (state.data.bannedIPs.includes(user.ip)) {
-                            return ui.showToast('This account is permanently banned.', 'error');
-                        }
-                        state.currentUser = { id: user.id, username: user.username };
-                        state.isAdminActive = user.isAdmin || false;
-                        ui.showToast(`Welcome back, ${user.username}!`, 'success');
+                    const u = data.users.find(x => x.username.toLowerCase() === uVal.toLowerCase() && x.password === pVal);
+                    if (u) {
+                        if (data.bannedIPs.includes(u.ip)) return ui.showToast('Account IP Banned.', 'error');
+                        localStorage.setItem('superdownloader_session', u.id); // Persistent session!
+                        state.currentUser = { id: u.id, username: u.username };
+                        state.isAdminActive = u.isAdmin || false;
+                        ui.showToast(`Welcome, ${u.username}!`, 'success');
                         ui.closeModal('authModal');
                         ui.updateMenu();
-                        this.checkAdmin(window.location.hash);
-                    } else {
-                        ui.showToast('Invalid credentials.', 'error');
-                    }
+                    } else ui.showToast('Invalid credentials.', 'error');
                 } else {
-                    // Register
-                    if (state.data.users.find(u => u.username.toLowerCase() === userVal.toLowerCase())) {
-                        return ui.showToast('Username already taken!', 'error');
-                    }
-                    const newUser = {
-                        id: 'u_' + Date.now(),
-                        username: userVal,
-                        password: passVal,
-                        isAdmin: false,
-                        ip: 'ip_' + Math.random().toString(36).substr(2, 9) // Simulating IP
-                    };
-                    state.data.users.push(newUser);
-                    await dbHelper.set('mainData', state.data);
-                    state.currentUser = { id: newUser.id, username: newUser.username };
-                    ui.showToast('Account created successfully!', 'success');
+                    if (data.users.find(x => x.username.toLowerCase() === uVal.toLowerCase())) return ui.showToast('Username taken!', 'error');
+                    const nu = { id: 'u_' + Date.now(), username: uVal, password: pVal, isAdmin: false, ip: 'ip_' + Math.random().toString(36).substr(2, 9) };
+                    data.users.push(nu);
+                    await dbHelper.write(data);
+                    
+                    localStorage.setItem('superdownloader_session', nu.id); // Persistent session!
+                    state.currentUser = { id: nu.id, username: nu.username };
+                    ui.showToast('Account created!', 'success');
                     ui.closeModal('authModal');
                     ui.updateMenu();
-                    this.checkAdmin(window.location.hash);
                 }
             },
             logout() {
+                localStorage.removeItem('superdownloader_session');
                 state.currentUser = null;
                 state.isAdminActive = false;
                 ui.updateMenu();
                 ui.switchView('home');
-                ui.showToast('Logged out successfully.', 'info');
+                ui.showToast('Logged out.', 'info');
             },
             requireLogin() {
-                if (!state.currentUser) {
-                    ui.openModal('authModal');
-                    return false;
-                }
+                if (!state.currentUser) { ui.openModal('authModal'); return false; }
                 return true;
             },
             async changeUsername() {
                 const newVal = document.getElementById('setNewUsername').value.trim();
                 if(newVal.length < 3) return ui.showToast('Username too short.', 'error');
-                if(state.data.users.find(u => u.username.toLowerCase() === newVal.toLowerCase())) return ui.showToast('Username taken.', 'error');
-                
-                let u = state.data.users.find(u => u.id === state.currentUser.id);
+                let u = data.users.find(x => x.id === state.currentUser.id);
                 if(u) {
                     u.username = newVal;
                     state.currentUser.username = newVal;
-                    await dbHelper.set('mainData', state.data);
+                    await dbHelper.write(data);
                     ui.updateMenu();
                     ui.showToast('Username updated!', 'success');
-                    document.getElementById('setNewUsername').value = '';
                 }
             },
             async changePassword() {
                 const oldP = document.getElementById('setOldPass').value;
                 const newP = document.getElementById('setNewPass').value;
-                let u = state.data.users.find(u => u.id === state.currentUser.id);
+                let u = data.users.find(x => x.id === state.currentUser.id);
                 if(u && u.password === oldP && newP.length >= 4) {
                     u.password = newP;
-                    await dbHelper.set('mainData', state.data);
+                    await dbHelper.write(data);
                     ui.showToast('Password updated!', 'success');
-                    document.getElementById('setOldPass').value = '';
-                    document.getElementById('setNewPass').value = '';
-                } else {
-                    ui.showToast('Invalid current password or new password too short.', 'error');
-                }
+                } else ui.showToast('Invalid old pass or new pass too short.', 'error');
             },
             async deleteAccount() {
-                if(confirm("Are you absolutely sure? This cannot be undone.")) {
-                    state.data.users = state.data.users.filter(u => u.id !== state.currentUser.id);
-                    await dbHelper.set('mainData', state.data);
+                if(confirm("Are you absolutely sure?")) {
+                    data.users = data.users.filter(x => x.id !== state.currentUser.id);
+                    await dbHelper.write(data);
                     this.logout();
                 }
             }
         };
 
-        // --- 6. App Store Functionality ---
+        // --- STREAMING_CHUNK:App Store Core Logic... ---
         const appStore = {
-            createAppCard(app) {
+            createCard(app) {
                 const div = document.createElement('div');
-                div.className = 'app-card bg-white rounded-2xl p-4 cursor-pointer flex flex-col h-full border border-gray-100 relative';
+                div.className = 'app-card bg-white rounded-2xl p-3 cursor-pointer flex flex-col h-full border border-gray-100 relative';
                 div.onclick = () => ui.switchView('app', app.id);
                 
-                let badgeHTML = '';
-                if (app.isVerified) badgeHTML += `<div class="absolute top-2 left-2 bg-blue-500 text-white text-[10px] font-bold px-2 py-1 rounded-full shadow-sm" title="Verified by PlayDownloader"><i class="fa-solid fa-shield-check mr-1"></i>Verified</div>`;
-                if (app.downloads >= 1000000) badgeHTML += `<div class="absolute top-2 right-2 bg-yellow-400 text-yellow-900 text-[10px] font-bold px-2 py-1 rounded-full shadow-sm" title="1M+ Downloads Badge"><i class="fa-solid fa-medal mr-1"></i>1M+</div>`;
-                if (app.isEduVerified) badgeHTML += `<div class="absolute bottom-20 right-2 bg-green-500 text-white text-[10px] font-bold px-2 py-1 rounded-full shadow-sm"><i class="fa-solid fa-graduation-cap mr-1"></i>Edu</div>`;
+                let b = '';
+                if (app.isVerified) b += `<div class="absolute top-2 left-2 bg-blue-500 text-white text-[10px] px-2 py-1 rounded-full z-10"><i class="fa-solid fa-shield-check"></i> Ver</div>`;
+                if (app.downloads >= 1e6) b += `<div class="absolute top-2 right-2 bg-yellow-400 text-yellow-900 text-[10px] px-2 py-1 rounded-full z-10"><i class="fa-solid fa-medal"></i> 1M+</div>`;
+                if (app.isEduVerified) b += `<div class="absolute bottom-16 right-2 bg-green-500 text-white text-[10px] px-2 py-1 rounded-full z-10"><i class="fa-solid fa-graduation-cap"></i> Edu</div>`;
 
-                const rating = this.calculateAverageRating(app.reviews);
-                
+                const r = this.calcRating(app.reviews);
                 div.innerHTML = `
-                    ${badgeHTML}
-                    <div class="w-full aspect-square rounded-xl bg-gray-100 mb-3 overflow-hidden">
-                        <img src="${app.iconUrl}" class="w-full h-full object-cover" onerror="this.src='https://placehold.co/200x200/e2e8f0/64748b?text=Icon'">
+                    ${b}
+                    <div class="w-full aspect-square rounded-xl bg-gray-100 mb-2 overflow-hidden relative">
+                        <img src="${app.iconUrl}" class="w-full h-full object-cover absolute inset-0" onerror="this.src='https://placehold.co/200'">
                     </div>
                     <div class="flex-1 flex flex-col">
-                        <h3 class="font-bold text-gray-900 leading-tight mb-1 line-clamp-1">${app.name}</h3>
-                        <p class="text-xs text-gray-500 mb-2">${app.authorName}</p>
+                        <h3 class="font-bold text-gray-900 text-sm line-clamp-1">${app.name}</h3>
+                        <p class="text-[10px] text-gray-500 mb-2 truncate">${app.authorName}</p>
                         <div class="mt-auto flex items-center justify-between">
-                            <div class="flex items-center text-xs font-bold text-gray-700">
-                                <span>${rating}</span><i class="fa-solid fa-star text-amber-400 ml-1 text-[10px]"></i>
-                            </div>
-                            <span class="text-xs font-semibold text-gray-500 bg-gray-100 px-2 py-1 rounded-md">${ui.formatNumber(app.downloads)}</span>
+                            <div class="flex items-center text-xs font-bold text-gray-700"><span>${r}</span><i class="fa-solid fa-star text-amber-400 ml-1 text-[10px]"></i></div>
+                            <span class="text-[10px] font-semibold text-gray-500 bg-gray-100 px-2 py-1 rounded-md">${ui.formatNum(app.downloads)}</span>
                         </div>
                     </div>
                 `;
                 return div;
             },
             renderApps() {
-                const recGrid = document.getElementById('recommendedAppsGrid');
-                const hitsGrid = document.getElementById('hitsAppsGrid');
-                recGrid.innerHTML = '';
-                hitsGrid.innerHTML = '';
+                const rG = document.getElementById('recommendedAppsGrid');
+                const hG = document.getElementById('hitsAppsGrid');
+                rG.innerHTML = ''; hG.innerHTML = '';
                 
-                const visibleApps = state.data.apps.filter(a => !a.isDeleted);
+                const vis = data.apps.filter(a => !a.isDeleted);
+                if(!vis.length) rG.innerHTML = `<p class="col-span-full text-center text-gray-500 py-10 w-full">Store is empty. Be the first to upload!</p>`;
                 
-                // Sort by new for recommended (simple simulation)
-                const recApps = [...visibleApps].reverse().slice(0, 12);
-                recApps.forEach(app => recGrid.appendChild(this.createAppCard(app)));
-
-                // Sort by downloads for hits
-                const hitApps = [...visibleApps].sort((a, b) => b.downloads - a.downloads).slice(0, 6);
-                hitApps.forEach(app => {
-                    const card = this.createAppCard(app);
-                    card.classList.add('flex-row', 'items-center', 'p-3');
-                    card.innerHTML = `
-                        <img src="${app.iconUrl}" class="w-16 h-16 rounded-xl object-cover mr-4" onerror="this.src='https://placehold.co/100/e2e8f0/64748b?text=Icon'">
-                        <div class="flex-1">
-                            <h3 class="font-bold text-gray-900">${app.name}</h3>
-                            <div class="text-xs text-gray-500 mt-1"><i class="fa-solid fa-star text-amber-400 mr-1"></i>${this.calculateAverageRating(app.reviews)} &bull; ${ui.formatNumber(app.downloads)} DLs</div>
+                [...vis].reverse().slice(0, 12).forEach(a => rG.appendChild(this.createCard(a)));
+                [...vis].sort((a, b) => b.downloads - a.downloads).slice(0, 6).forEach(a => {
+                    const c = this.createCard(a);
+                    c.classList.add('flex-row', 'items-center');
+                    c.innerHTML = `
+                        <img src="${a.iconUrl}" class="w-16 h-16 rounded-xl object-cover mr-3 flex-shrink-0" onerror="this.src='https://placehold.co/100'">
+                        <div class="flex-1 overflow-hidden">
+                            <h3 class="font-bold text-sm truncate">${a.name}</h3>
+                            <div class="text-[10px] text-gray-500 mt-1"><i class="fa-solid fa-star text-amber-400 mr-1"></i>${this.calcRating(a.reviews)} &bull; ${ui.formatNum(a.downloads)} DLs</div>
                         </div>
                     `;
-                    hitsGrid.appendChild(card);
+                    hG.appendChild(c);
                 });
-                
-                if(visibleApps.length === 0) {
-                    recGrid.innerHTML = `<p class="col-span-full text-center text-gray-500 py-10">${i18n.t('no_files')}</p>`;
-                }
             },
             renderAppDetails(id) {
-                const app = state.data.apps.find(a => a.id === id);
-                if (!app || app.isDeleted) return ui.switchView('home');
+                const a = data.apps.find(x => x.id === id);
+                if (!a || a.isDeleted) return ui.switchView('home');
 
-                const view = document.getElementById('view-app');
-                const rating = this.calculateAverageRating(app.reviews);
+                const v = document.getElementById('view-app');
+                const r = this.calcRating(a.reviews);
                 
-                // Similar apps
-                const similarHTML = state.data.apps
-                    .filter(a => a.id !== id && !a.isDeleted)
-                    .slice(0, 4)
-                    .map(a => `
-                        <div onclick="ui.switchView('app', '${a.id}')" class="cursor-pointer text-center group">
-                            <img src="${a.iconUrl}" class="w-16 h-16 rounded-xl mx-auto mb-2 object-cover group-hover:scale-105 transition-transform" onerror="this.src='https://placehold.co/100'">
-                            <p class="text-xs font-bold text-gray-800 line-clamp-1">${a.name}</p>
-                        </div>
-                    `).join('') || `<p class="text-sm text-gray-500 w-full text-center">No similar apps</p>`;
+                const sim = data.apps.filter(x => x.id !== id && !x.isDeleted).slice(0, 4).map(x => `
+                    <div onclick="ui.switchView('app', '${x.id}')" class="cursor-pointer text-center group w-20 flex-shrink-0">
+                        <img src="${x.iconUrl}" class="w-16 h-16 rounded-xl mx-auto mb-2 object-cover group-hover:scale-105 transition-transform" onerror="this.src='https://placehold.co/100'">
+                        <p class="text-[10px] font-bold text-gray-800 truncate">${x.name}</p>
+                    </div>
+                `).join('') || `<p class="text-xs text-gray-500">No similar apps</p>`;
 
-                let btnHTML = '';
-                if(app.apkFile) {
-                    btnHTML = `<button onclick="appStore.downloadApp('${app.id}')" class="flex-1 bg-emerald-600 text-white font-bold py-3 px-6 rounded-xl shadow-md hover:bg-emerald-700 transition-colors text-lg"><i class="fa-solid fa-download mr-2"></i>${i18n.t('btn_download')}</button>`;
-                } else {
-                    btnHTML = `<button disabled class="flex-1 bg-gray-300 text-gray-500 font-bold py-3 px-6 rounded-xl text-lg cursor-not-allowed">Brak plików</button>`;
-                }
-
-                view.innerHTML = `
-                    <div class="bg-white rounded-3xl shadow-sm border border-gray-100 overflow-hidden max-w-4xl mx-auto">
-                        <div class="p-6 md:p-10 flex flex-col md:flex-row gap-8">
-                            <!-- Icon -->
-                            <div class="w-32 h-32 md:w-48 md:h-48 flex-shrink-0 mx-auto md:mx-0 shadow-lg rounded-3xl overflow-hidden relative">
-                                <img src="${app.iconUrl}" class="w-full h-full object-cover" onerror="this.src='https://placehold.co/400'">
+                v.innerHTML = `
+                    <div class="bg-white rounded-3xl shadow-sm border border-gray-100 overflow-hidden max-w-4xl mx-auto w-full">
+                        <div class="p-4 sm:p-8 flex flex-col md:flex-row gap-6">
+                            <div class="w-24 h-24 sm:w-32 sm:h-32 md:w-48 md:h-48 mx-auto md:mx-0 shadow-lg rounded-3xl overflow-hidden relative flex-shrink-0">
+                                <img src="${a.iconUrl}" class="w-full h-full object-cover absolute inset-0" onerror="this.src='https://placehold.co/400'">
                             </div>
-                            
-                            <!-- Info -->
                             <div class="flex-1 text-center md:text-left flex flex-col">
-                                <h1 class="text-3xl md:text-4xl font-extrabold text-gray-900 mb-2">${app.name}</h1>
-                                <p class="text-lg text-emerald-600 font-semibold mb-4">${app.authorName}</p>
+                                <h1 class="text-2xl sm:text-3xl md:text-4xl font-extrabold text-gray-900 mb-1 break-words">${a.name}</h1>
+                                <p class="text-base text-emerald-600 font-semibold mb-4">${a.authorName}</p>
                                 
-                                <div class="flex flex-wrap items-center justify-center md:justify-start gap-6 mb-6">
-                                    <div class="text-center">
-                                        <div class="text-xl font-bold text-gray-900">${rating} <i class="fa-solid fa-star text-amber-400 text-sm"></i></div>
-                                        <div class="text-xs text-gray-500">${app.reviews.length} reviews</div>
-                                    </div>
-                                    <div class="h-8 w-px bg-gray-200"></div>
-                                    <div class="text-center">
-                                        <div class="text-xl font-bold text-gray-900">${ui.formatNumber(app.downloads)}+</div>
-                                        <div class="text-xs text-gray-500">Downloads</div>
-                                    </div>
-                                    <div class="h-8 w-px bg-gray-200"></div>
-                                    <div class="text-center">
-                                        <div class="w-8 h-8 mx-auto border-2 border-gray-900 rounded flex items-center justify-center font-bold text-sm">${app.ageRating}</div>
-                                        <div class="text-xs text-gray-500 mt-1">Age</div>
-                                    </div>
+                                <div class="flex flex-wrap items-center justify-center md:justify-start gap-4 mb-6">
+                                    <div class="text-center"><div class="text-lg font-bold">${r} <i class="fa-solid fa-star text-amber-400 text-sm"></i></div><div class="text-[10px] text-gray-500">Reviews</div></div>
+                                    <div class="h-6 w-px bg-gray-200"></div>
+                                    <div class="text-center"><div class="text-lg font-bold">${ui.formatNum(a.downloads)}+</div><div class="text-[10px] text-gray-500">Downloads</div></div>
+                                    <div class="h-6 w-px bg-gray-200"></div>
+                                    <div class="text-center"><div class="w-8 h-8 mx-auto border-2 border-gray-900 rounded flex items-center justify-center font-bold text-sm">${a.ageRating}</div><div class="text-[10px] text-gray-500 mt-1">Age</div></div>
                                 </div>
                                 
-                                <div class="mt-auto flex gap-4">
-                                    ${btnHTML}
-                                    <button onclick="appStore.playGame()" class="bg-gray-100 text-emerald-700 font-bold py-3 px-6 rounded-xl hover:bg-gray-200 transition-colors"><i class="fa-solid fa-play mr-2"></i>${i18n.t('btn_play')}</button>
+                                <div class="mt-auto flex flex-col sm:flex-row gap-3">
+                                    ${a.apkFile ? `<button onclick="appStore.downloadApp('${a.id}')" class="flex-1 bg-emerald-600 text-white font-bold py-3 px-6 rounded-xl shadow-md hover:bg-emerald-700"><i class="fa-solid fa-download mr-2"></i>Download</button>` : `<button disabled class="flex-1 bg-gray-300 text-gray-500 font-bold py-3 rounded-xl cursor-not-allowed">No Files</button>`}
+                                    <button onclick="p2pNetwork.startSeeding('${a.id}')" class="bg-blue-100 text-blue-700 font-bold py-3 px-6 rounded-xl hover:bg-blue-200" title="Host on P2P"><i class="fa-solid fa-network-wired mr-2"></i>Seed P2P</button>
                                 </div>
                             </div>
                         </div>
                         
-                        <div class="p-6 md:p-10 border-t border-gray-100 bg-gray-50">
-                            <h3 class="font-bold text-gray-900 text-xl mb-4">About this app</h3>
-                            <p class="text-gray-700 leading-relaxed whitespace-pre-wrap">${app.description}</p>
+                        <div class="p-6 border-t border-gray-100 bg-gray-50">
+                            <h3 class="font-bold text-lg mb-2">About this app</h3>
+                            <p class="text-sm text-gray-700 whitespace-pre-wrap break-words">${a.description}</p>
                         </div>
 
-                        <!-- Reviews Section -->
-                        <div class="p-6 md:p-10 border-t border-gray-100">
-                            <h3 class="font-bold text-gray-900 text-xl mb-6">${i18n.t('reviews_title')}</h3>
-                            
+                        <div class="p-6 border-t border-gray-100">
+                            <h3 class="font-bold text-lg mb-4" data-i18n="reviews_title">Ratings and reviews</h3>
                             ${state.currentUser ? `
-                                <div class="bg-gray-50 p-6 rounded-2xl mb-8 border border-gray-200">
-                                    <h4 class="font-bold text-gray-800 mb-3">Leave a review</h4>
-                                    <div class="flex gap-2 mb-3" id="starSelector">
-                                        ${[1,2,3,4,5].map(i => `<i class="fa-solid fa-star text-gray-300 text-2xl cursor-pointer hover:text-amber-400 transition-colors" onmouseover="appStore.hoverStars(${i})" onmouseout="appStore.hoverStars(state.selectedStars)" onclick="appStore.selectStars(${i})"></i>`).join('')}
-                                    </div>
-                                    <textarea id="reviewText" rows="3" class="w-full px-4 py-3 rounded-xl border border-gray-300 focus:ring-2 focus:ring-emerald-500 outline-none resize-none mb-3" placeholder="Describe your experience..."></textarea>
-                                    <button onclick="appStore.submitReview('${app.id}')" class="bg-emerald-600 text-white px-6 py-2 rounded-xl font-bold shadow hover:bg-emerald-700">Post Review</button>
+                                <div class="bg-gray-50 p-4 rounded-xl mb-6">
+                                    <h4 class="font-bold text-sm mb-2">Leave a review</h4>
+                                    <div class="flex gap-1 mb-2" id="starSelector">${[1,2,3,4,5].map(i => `<i class="fa-solid fa-star text-gray-300 text-xl cursor-pointer hover:text-amber-400" onmouseover="appStore.hStars(${i})" onmouseout="appStore.hStars(state.selectedStars)" onclick="appStore.sStars(${i})"></i>`).join('')}</div>
+                                    <textarea id="reviewText" rows="2" class="w-full px-3 py-2 rounded-xl border outline-none mb-2 text-sm resize-none"></textarea>
+                                    <button onclick="appStore.submitRev('${a.id}')" class="bg-emerald-600 text-white px-4 py-2 rounded-xl font-bold text-sm">Post</button>
                                 </div>
-                            ` : `<p class="text-sm text-gray-500 mb-6 bg-gray-50 p-4 rounded-xl text-center"><button onclick="ui.openModal('authModal')" class="text-emerald-600 font-bold underline">Sign in</button> to leave a review.</p>`}
+                            ` : `<p class="text-sm text-gray-500 mb-4">Sign in to review.</p>`}
                             
-                            <div class="space-y-6">
-                                ${app.reviews.length ? app.reviews.map(r => `
-                                    <div class="border-b border-gray-100 pb-6 last:border-0 last:pb-0">
-                                        <div class="flex items-center gap-3 mb-2">
-                                            <div class="w-8 h-8 bg-gray-200 rounded-full flex items-center justify-center font-bold text-gray-600 text-xs">${r.authorName[0].toUpperCase()}</div>
-                                            <div>
-                                                <div class="font-bold text-sm text-gray-900">${r.authorName}</div>
-                                                <div class="flex text-amber-400 text-[10px]">
-                                                    ${Array(5).fill(0).map((_, i) => `<i class="fa-solid fa-star ${i < r.rating ? '' : 'text-gray-200'}"></i>`).join('')}
-                                                </div>
-                                            </div>
+                            <div class="space-y-4">
+                                ${a.reviews.length ? a.reviews.map(r => `
+                                    <div class="border-b border-gray-100 pb-4">
+                                        <div class="flex items-center gap-2 mb-1">
+                                            <div class="w-6 h-6 bg-gray-200 rounded-full flex items-center justify-center font-bold text-xs">${r.authorName[0].toUpperCase()}</div>
+                                            <div class="font-bold text-sm">${r.authorName}</div>
+                                            <div class="flex text-amber-400 text-[10px] ml-2">${Array(5).fill(0).map((_, i) => `<i class="fa-solid fa-star ${i < r.rating ? '' : 'text-gray-200'}"></i>`).join('')}</div>
                                         </div>
-                                        <p class="text-gray-700 text-sm">${r.text}</p>
+                                        <p class="text-gray-700 text-sm break-words">${r.text}</p>
                                     </div>
-                                `).join('') : `<p class="text-gray-500 text-center py-4">No reviews yet.</p>`}
+                                `).join('') : `<p class="text-gray-500 text-sm">No reviews yet.</p>`}
                             </div>
                         </div>
                     </div>
-                    
-                    <div class="max-w-4xl mx-auto mt-8">
-                        <h3 class="text-xl font-bold text-gray-900 mb-4">${i18n.t('similar_apps')}</h3>
-                        <div class="flex gap-4 overflow-x-auto pb-4 hide-scrollbar">
-                            ${similarHTML}
-                        </div>
-                    </div>
                 `;
+                i18n.updateDOM();
             },
-            calculateAverageRating(reviews) {
-                if (!reviews || reviews.length === 0) return '0.0';
-                const sum = reviews.reduce((a, b) => a + b.rating, 0);
-                return (sum / reviews.length).toFixed(1);
-            },
-            hoverStars(num) {
-                const stars = document.getElementById('starSelector').children;
-                for(let i=0; i<5; i++) {
-                    stars[i].className = `fa-solid fa-star text-2xl cursor-pointer transition-colors ${i < num ? 'text-amber-400' : 'text-gray-300'}`;
-                }
-            },
-            selectStars(num) {
-                state.selectedStars = num;
-                this.hoverStars(num);
-            },
-            async submitReview(appId) {
-                if (!state.selectedStars) return ui.showToast('Please select a star rating.', 'error');
-                const text = document.getElementById('reviewText').value.trim();
-                if (!text) return ui.showToast('Please write a review.', 'error');
-                
-                const app = state.data.apps.find(a => a.id === appId);
-                if (app) {
-                    app.reviews.unshift({
-                        id: 'r_' + Date.now(),
-                        authorId: state.currentUser.id,
-                        authorName: state.currentUser.username,
-                        rating: state.selectedStars,
-                        text: text,
-                        date: new Date().toISOString()
-                    });
-                    await dbHelper.set('mainData', state.data);
+            calcRating(revs) { return !revs || !revs.length ? '0.0' : (revs.reduce((a, b) => a + b.rating, 0) / revs.length).toFixed(1); },
+            hStars(n) { const s = document.getElementById('starSelector').children; for(let i=0; i<5; i++) s[i].className = `fa-solid fa-star text-xl cursor-pointer ${i < n ? 'text-amber-400' : 'text-gray-300'}`; },
+            sStars(n) { state.selectedStars = n; this.hStars(n); },
+            async submitRev(id) {
+                if(!state.selectedStars) return ui.showToast('Select stars.', 'error');
+                const t = document.getElementById('reviewText').value.trim();
+                if(!t) return ui.showToast('Write review.', 'error');
+                const a = data.apps.find(x => x.id === id);
+                if(a) {
+                    a.reviews.unshift({ id: 'r_'+Date.now(), authorId: state.currentUser.id, authorName: state.currentUser.username, rating: state.selectedStars, text: t });
+                    await dbHelper.write(data);
                     state.selectedStars = 0;
-                    this.renderAppDetails(appId);
-                    ui.showToast('Review posted!', 'success');
+                    this.renderAppDetails(id);
+                    ui.showToast('Posted!', 'success');
                 }
-            },
-            playGame() {
-                ui.showToast('Requesting permission to run application...', 'info');
-                setTimeout(() => {
-                    ui.showToast('Application started (Simulation)', 'success');
-                }, 1500);
             },
             async downloadApp(id) {
-                const app = state.data.apps.find(a => a.id === id);
-                if(app && app.apkFile) {
-                    // Check family link simulation based on age rating
-                    if(app.ageRating === '18+' || app.ageRating === '16+') {
-                        const confirmDownload = confirm(`Family Link: This app is rated ${app.ageRating}. Are you sure you want to download it?`);
-                        if(!confirmDownload) return;
-                    }
-
-                    app.downloads++;
-                    await dbHelper.set('mainData', state.data);
-                    
-                    // Actually trigger download
+                const a = data.apps.find(x => x.id === id);
+                if(a && a.apkFile) {
+                    if((a.ageRating === '18+' || a.ageRating === '16+') && !confirm(`Family Link: Rated ${a.ageRating}. Proceed?`)) return;
+                    a.downloads++;
+                    await dbHelper.write(data);
+                    // Actual file download trigger
                     const link = document.createElement('a');
-                    link.href = app.apkFile;
-                    link.download = `${app.name.replace(/\s+/g, '_')}.apk`;
+                    link.href = a.apkFile;
+                    link.download = `${a.name.replace(/\s+/g, '_')}.apk`;
                     document.body.appendChild(link);
                     link.click();
                     document.body.removeChild(link);
-                    
-                    this.renderAppDetails(id); // update counter
+                    this.renderAppDetails(id); 
                     ui.showToast('Download started!', 'success');
-                } else {
-                    ui.showToast('File not available.', 'error');
                 }
             },
-            
-            // --- Upload Process ---
+
+            // --- STREAMING_CHUNK:AI Context-Aware Upload System ---
             resetUpload() {
-                document.getElementById('uploadStep1').classList.remove('hidden');
-                document.getElementById('uploadStep2').classList.add('hidden');
-                document.getElementById('uploadStep3').classList.add('hidden');
-                document.getElementById('upName').value = '';
-                document.getElementById('upDesc').value = '';
-                document.getElementById('upIcon').value = '';
-                document.getElementById('upApk').value = '';
+                ['uploadStep1', 'uploadStep2', 'uploadStep3'].forEach(id => document.getElementById(id).classList.toggle('hidden', id !== 'uploadStep1'));
+                ['upName', 'upDesc', 'upIcon', 'upApk'].forEach(id => document.getElementById(id).value = '');
                 document.querySelectorAll('input[type="checkbox"]').forEach(c => c.checked = false);
             },
-            nextUploadStep(step) {
+            async nextUploadStep(step) {
                 if (step === 2) {
-                    const name = document.getElementById('upName').value.trim();
-                    const desc = document.getElementById('upDesc').value.trim();
-                    const iconFile = document.getElementById('upIcon').files[0];
-                    const apkFile = document.getElementById('upApk').files[0];
+                    const n = document.getElementById('upName').value.trim();
+                    const d = document.getElementById('upDesc').value.trim();
+                    const iF = document.getElementById('upIcon').files[0];
+                    const aF = document.getElementById('upApk').files[0];
 
-                    if (name.length < 3) return ui.showToast('Name too short.', 'error');
-                    if (desc.length < 10) return ui.showToast('Description too short.', 'error');
-                    if (!iconFile) return ui.showToast('Please select an icon image.', 'error');
-                    if (!apkFile || !apkFile.name.endsWith('.apk')) return ui.showToast('You must upload a valid .apk file!', 'error');
+                    if (n.length < 3) return ui.showToast('Name too short.', 'error');
+                    if (d.length < 10) return ui.showToast('Description too short.', 'error');
+                    if (!iF) return ui.showToast('Select an icon.', 'error');
+                    if (!aF || !aF.name.endsWith('.apk')) return ui.showToast('Must upload valid .apk!', 'error');
 
-                    // Convert files to base64 for IDB storage
-                    const readAsDataURL = (file) => new Promise(res => {
-                        const reader = new FileReader();
-                        reader.onload = e => res(e.target.result);
-                        reader.readAsDataURL(file);
-                    });
-
-                    Promise.all([readAsDataURL(iconFile), readAsDataURL(apkFile)]).then(results => {
-                        state.tempUploadData = {
-                            name, desc, iconData: results[0], apkData: results[1]
-                        };
+                    const read = f => new Promise(r => { const rd = new FileReader(); rd.onload = e => r(e.target.result); rd.readAsDataURL(f); });
+                    
+                    ui.showToast('Reading large files into browser memory...', 'info');
+                    try {
+                        const [icn, apk] = await Promise.all([read(iF), read(aF)]);
+                        state.tempUploadData = { name: n, desc: d, iconData: icn, apkData: apk };
                         document.getElementById('uploadStep1').classList.add('hidden');
                         document.getElementById('uploadStep2').classList.remove('hidden');
-                    });
+                    } catch(e) { ui.showToast('File error. Too large?', 'error'); }
                 }
             },
             prevUploadStep() {
                 document.getElementById('uploadStep2').classList.add('hidden');
                 document.getElementById('uploadStep1').classList.remove('hidden');
             },
-            calculateAIAgeRating() {
-                const isChk = id => document.getElementById(id).checked;
-                let score = 0;
+            
+            // AI Contextual Scoring
+            calcAIAge() {
+                const c = id => document.getElementById(id).checked;
+                let s = 0;
                 
-                if(isChk('qExplicit') || isChk('qGambling') || isChk('qDrugs')) return '18+';
+                // Absolute 18+ filters
+                if(c('qSexExplicit') || c('qGambling') || c('qDrugs')) return '18+';
                 
-                if(isChk('qBlood')) score += 10;
-                if(isChk('qViolence')) score += 8;
-                if(isChk('qFear')) score += 5;
-                if(isChk('qSwear')) score += 6;
-                if(isChk('qSexMild')) score += 7;
-                if(isChk('qOnline')) score += 3;
+                // Additive scores
+                if(c('qBlood')) s += 10;
+                if(c('qViolence')) s += 8;
+                if(c('qFear')) s += 5;
+                if(c('qSwear')) s += 6;
+                if(c('qSexMild')) s += 7;
+                if(c('qOnline')) s += 4;
                 
-                // AI Context modification
-                if(isChk('qEdu')) score -= 5; // Education mitigates some things
+                // AI Context: Educational apps mitigate violence/blood (e.g., medical/history apps)
+                if(c('qEdu')) {
+                    if(s > 0) s = Math.max(0, s - 6);
+                }
                 
-                if(score >= 12) return '16+';
-                if(score >= 7) return '13+';
-                if(score >= 3) return '7+';
+                if(s >= 12) return '16+';
+                if(s >= 7) return '13+';
+                if(s >= 3) return '7+';
                 return '3+';
             },
-            async startUploadProcess() {
-                if (!document.getElementById('vBot').checked) return ui.showToast('Verify you are not a robot.', 'error');
-                if (!document.getElementById('vTos').checked) return ui.showToast('You must accept the ToS.', 'error');
+
+            // Changed from standard function expression to fix TypeError
+            startUploadProcess: function() {
+                if (!document.getElementById('vBot').checked || !document.getElementById('vTos').checked) {
+                    return ui.showToast('Check verification boxes!', 'error');
+                }
 
                 document.getElementById('uploadStep2').classList.add('hidden');
                 document.getElementById('uploadStep3').classList.remove('hidden');
 
                 const bar = document.getElementById('uploadProgressBar');
-                const text = document.getElementById('uploadProgressText');
+                const txt = document.getElementById('uploadProgressText');
                 
-                let progress = 0;
-                const interval = setInterval(async () => {
-                    progress += Math.floor(Math.random() * 15) + 5;
-                    if (progress > 100) progress = 100;
-                    
-                    bar.style.width = progress + '%';
-                    text.innerText = progress + '%';
+                let p = 0;
+                const int = setInterval(async () => {
+                    p += Math.floor(Math.random() * 20) + 10;
+                    if (p >= 100) {
+                        p = 100;
+                        clearInterval(int);
+                        bar.style.width = '100%';
+                        txt.innerText = '100%';
 
-                    if (progress === 100) {
-                        clearInterval(interval);
-                        
-                        // Save to Database
                         const newApp = {
                             id: 'app_' + Date.now(),
                             name: state.tempUploadData.name,
@@ -987,143 +961,119 @@
                             authorId: state.currentUser.id,
                             authorName: state.currentUser.username,
                             downloads: 0,
-                            ageRating: this.calculateAIAgeRating(),
+                            ageRating: this.calcAIAge(),
                             reviews: [],
                             isVerified: false,
                             isEduVerified: document.getElementById('qEdu').checked,
                             isDeleted: false
                         };
                         
-                        state.data.apps.push(newApp);
-                        await dbHelper.set('mainData', state.data);
+                        data.apps.push(newApp);
+                        await dbHelper.write(data);
                         
                         setTimeout(() => {
-                            ui.showToast('App published to P2P network!', 'success');
+                            ui.showToast('App saved to Local Node (Ready for P2P Seeding)!', 'success');
                             ui.switchView('home');
                         }, 500);
+                    } else {
+                        bar.style.width = p + '%';
+                        txt.innerText = p + '%';
                     }
-                }, 300); // Simulate network speed
+                }, 400); 
             }
         };
 
-        // --- 7. Admin Panel ---
+        // --- STREAMING_CHUNK:Admin Panel ---
         const admin = {
             render() {
-                const uList = document.getElementById('adminUserList');
-                const aList = document.getElementById('adminAppList');
-                uList.innerHTML = '';
-                aList.innerHTML = '';
+                const uL = document.getElementById('adminUserList');
+                const aL = document.getElementById('adminAppList');
+                uL.innerHTML = ''; aL.innerHTML = '';
 
-                // Users
-                state.data.users.forEach(u => {
-                    const isBanned = state.data.bannedIPs.includes(u.ip);
-                    uList.innerHTML += `
-                        <div class="flex justify-between items-center p-3 bg-gray-50 rounded-xl border border-gray-100">
-                            <div>
+                data.users.forEach(u => {
+                    const b = data.bannedIPs.includes(u.ip);
+                    uL.innerHTML += `
+                        <div class="flex flex-col sm:flex-row justify-between sm:items-center p-3 bg-gray-50 rounded-xl border border-gray-100 gap-2 text-sm">
+                            <div class="truncate w-full sm:w-auto">
                                 <span class="font-bold">${u.username}</span> ${u.isAdmin ? '<span class="text-red-500 text-xs ml-1">(Admin)</span>' : ''}
                                 <div class="text-xs text-gray-500">IP: ${u.ip}</div>
                             </div>
-                            ${!u.isAdmin ? `
-                                <button onclick="admin.banIP('${u.ip}')" class="px-3 py-1 ${isBanned ? 'bg-gray-300' : 'bg-red-500 hover:bg-red-600'} text-white rounded text-xs font-bold">
-                                    ${isBanned ? 'Unban IP' : 'Ban IP'}
-                                </button>
-                            ` : ''}
+                            ${!u.isAdmin ? `<button onclick="admin.banIP('${u.ip}')" class="px-3 py-1.5 ${b ? 'bg-gray-300' : 'bg-red-500 text-white'} rounded font-bold w-full sm:w-auto">${b ? 'Unban IP' : 'Ban IP'}</button>` : ''}
                         </div>
                     `;
                 });
 
-                // Apps
-                state.data.apps.forEach(a => {
-                    aList.innerHTML += `
-                        <div class="p-3 bg-gray-50 rounded-xl border border-gray-100 mb-2 ${a.isDeleted ? 'opacity-50' : ''}">
-                            <div class="flex justify-between items-center mb-2">
-                                <span class="font-bold truncate max-w-[150px]">${a.name}</span>
-                                <div class="flex gap-1">
-                                    <button onclick="admin.toggleVerifyApp('${a.id}')" class="px-2 py-1 bg-blue-500 text-white rounded text-[10px] font-bold" title="Verify PlayDownloader"><i class="fa-solid fa-shield"></i></button>
-                                    <button onclick="admin.toggleDeleteApp('${a.id}')" class="px-2 py-1 ${a.isDeleted ? 'bg-green-500' : 'bg-red-500'} text-white rounded text-[10px] font-bold">${a.isDeleted ? 'Restore' : 'Delete'}</button>
+                data.apps.forEach(a => {
+                    aL.innerHTML += `
+                        <div class="p-3 bg-gray-50 rounded-xl border border-gray-100 mb-2 text-sm ${a.isDeleted ? 'opacity-50' : ''}">
+                            <div class="flex flex-col sm:flex-row justify-between sm:items-center mb-1 gap-2">
+                                <span class="font-bold truncate max-w-full sm:max-w-[150px]">${a.name}</span>
+                                <div class="flex gap-2 w-full sm:w-auto">
+                                    <button onclick="admin.tVer('${a.id}')" class="flex-1 px-3 py-1 bg-blue-500 text-white rounded font-bold"><i class="fa-solid fa-shield"></i></button>
+                                    <button onclick="admin.tDel('${a.id}')" class="flex-1 px-3 py-1 ${a.isDeleted ? 'bg-green-500' : 'bg-red-500'} text-white rounded font-bold">${a.isDeleted ? 'Restore' : 'Del'}</button>
                                 </div>
                             </div>
-                            <div class="text-xs text-gray-500">By: ${a.authorName} | DLs: ${a.downloads}</div>
+                            <div class="text-xs text-gray-500">By: ${a.authorName}</div>
                         </div>
                     `;
                 });
             },
             async banIP(ip) {
-                if(state.data.bannedIPs.includes(ip)) {
-                    state.data.bannedIPs = state.data.bannedIPs.filter(i => i !== ip);
-                    ui.showToast('IP unbanned', 'info');
-                } else {
-                    state.data.bannedIPs.push(ip);
-                    ui.showToast('IP permanently banned', 'error');
-                }
-                await dbHelper.set('mainData', state.data);
-                this.render();
+                if(data.bannedIPs.includes(ip)) data.bannedIPs = data.bannedIPs.filter(i => i !== ip);
+                else data.bannedIPs.push(ip);
+                await dbHelper.write(data); this.render();
             },
-            async toggleDeleteApp(id) {
-                const app = state.data.apps.find(a => a.id === id);
-                if(app) {
-                    app.isDeleted = !app.isDeleted;
-                    await dbHelper.set('mainData', state.data);
-                    ui.showToast(app.isDeleted ? 'App deleted' : 'App restored', 'info');
-                    this.render();
-                }
-            },
-            async toggleVerifyApp(id) {
-                const app = state.data.apps.find(a => a.id === id);
-                if(app) {
-                    app.isVerified = !app.isVerified;
-                    await dbHelper.set('mainData', state.data);
-                    ui.showToast('Verification status changed', 'success');
-                    this.render();
-                }
-            }
+            async tDel(id) { const a = data.apps.find(x => x.id === id); if(a) { a.isDeleted = !a.isDeleted; await dbHelper.write(data); this.render(); } },
+            async tVer(id) { const a = data.apps.find(x => x.id === id); if(a) { a.isVerified = !a.isVerified; await dbHelper.write(data); this.render(); } }
         };
 
-        // --- 8. Event Listeners & Initialization ---
-        document.getElementById('upDesc')?.addEventListener('input', (e) => {
-            document.getElementById('descCount').innerText = e.target.value.length;
-        });
-
+        // --- STREAMING_CHUNK:Global Events & Bootstrapping ---
+        document.getElementById('upDesc')?.addEventListener('input', (e) => document.getElementById('descCount').innerText = e.target.value.length);
+        
+        // Close menus on outside click
         document.addEventListener('click', (e) => {
-            const menuBtn = e.target.closest('#userMenuContainer button');
+            const btn = e.target.closest('#userProfileBtn');
             const menu = document.getElementById('userDropdownMenu');
-            if (!menuBtn && menu && !menu.classList.contains('hidden')) {
-                menu.classList.add('hidden');
-            }
+            if (!btn && menu && !menu.classList.contains('hidden')) menu.classList.add('hidden');
         });
 
-        // Search in admin
         document.getElementById('adminAppSearch')?.addEventListener('input', (e) => {
-            const query = e.target.value.toLowerCase();
-            const list = document.getElementById('adminAppList');
-            Array.from(list.children).forEach(child => {
-                if(child.innerText.toLowerCase().includes(query)) child.style.display = 'block';
-                else child.style.display = 'none';
-            });
+            const q = e.target.value.toLowerCase();
+            Array.from(document.getElementById('adminAppList').children).forEach(c => c.style.display = c.innerText.toLowerCase().includes(q) ? 'block' : 'none');
         });
 
         window.onload = async () => {
             document.getElementById('currentYear').innerText = new Date().getFullYear();
             
+            // 1. Load Data from IndexedDB
             try {
                 await dbHelper.init();
-                const savedData = await dbHelper.get('mainData');
-                if (savedData) {
-                    state.data = savedData;
+                const d = await dbHelper.read();
+                if (d) data = d;
+            } catch (e) { ui.showToast("Database init failed.", "error"); }
+
+            // 2. Persistent Login Check
+            const sId = localStorage.getItem('superdownloader_session');
+            if (sId) {
+                const u = data.users.find(x => x.id === sId);
+                if (u && !data.bannedIPs.includes(u.ip)) {
+                    state.currentUser = { id: u.id, username: u.username };
+                    state.isAdminActive = u.isAdmin || false;
+                } else {
+                    localStorage.removeItem('superdownloader_session');
                 }
-            } catch (e) {
-                console.error("IDB Error:", e);
-                ui.showToast("Database error, using temporary session.", "error");
             }
 
+            // 3. Start P2P WebRTC Network
+            p2pNetwork.init();
+
+            // 4. Update UI
             i18n.init();
             ui.updateMenu();
             appStore.renderApps();
 
-            // Hash admin check on load
-            if (window.location.hash) {
-                auth.checkAdmin(window.location.hash);
-            }
+            // 5. Admin Code Check
+            if (window.location.hash) auth.checkAdmin(window.location.hash);
         };
     </script>
 </body>
