@@ -314,29 +314,68 @@
                 if(freshUser) currentUser = freshUser;
             }
             
-            checkAdminHash();
             renderTopNav();
             enforceBanState(); 
         }
 
         function generateId() {
-            return Math.random().toString(36).substr(2, 9) + Date.now();
+            // Zmieniono by ID miało max 8 znaków (między 3 a 10), jest całkowicie unikalne!
+            return Math.random().toString(36).substring(2, 10);
         }
 
         function checkIfIpBanned(ipToken) {
             return db.users.some(u => u.ipToken === ipToken && u.ipBanned);
         }
 
-        function checkAdminHash() {
-            if(window.location.hash === '#7319112' && currentUser) {
-                currentUser.role = 'admin';
-                saveDb();
-                showToast('Admin access granted!', 'success');
-                window.location.hash = ''; 
-                renderTopNav();
+        // --- NOWY SYSTEM ROUTINGU (ZAPISYWANIE W LINKU) ---
+        window.addEventListener('hashchange', () => {
+            if (viewTransitionSupported) {
+                document.startViewTransition(() => processHashRoute());
+            } else {
+                processHashRoute();
             }
+        });
+
+        function processHashRoute() {
+            let hash = window.location.hash;
+            
+            // Obsługa ukrytego panelu administratora
+            if(hash === '#7319112') {
+                if(currentUser) {
+                    currentUser.role = 'admin';
+                    saveDb();
+                    showToast('Admin access granted!', 'success');
+                    renderTopNav();
+                }
+                window.location.hash = '#home';
+                return;
+            }
+
+            let view = 'home';
+            let params = {};
+
+            if (hash.startsWith('#apk-name=')) {
+                // Rozbija URL na nazwę i ID, np: #apk-name=Roblox-id=x7y8z9a
+                const parts = hash.split('-id=');
+                if (parts.length === 2) {
+                    view = 'app';
+                    params.id = parts[1];
+                }
+            } else if (hash.startsWith('#search=')) {
+                view = 'search';
+                params.query = decodeURIComponent(hash.replace('#search=', ''));
+            } else if (hash === '#upload' || hash === '#admin' || hash === '#settings') {
+                view = hash.replace('#', '');
+            } else if (hash === '#home') {
+                view = 'home';
+            } else if (hash === '') {
+                view = 'home';
+            }
+
+            currentActiveView = view;
+            currentActiveParams = params;
+            renderCoreView(view, params);
         }
-        window.addEventListener('hashchange', checkAdminHash);
 
         function showToast(message, type = 'info') {
             const container = document.getElementById('toastContainer');
@@ -385,12 +424,19 @@
         }
 
         function navigate(view, params = {}) {
-            currentActiveView = view;
-            currentActiveParams = params;
-            if (viewTransitionSupported) {
-                document.startViewTransition(() => renderCoreView(view, params));
+            // Zamiast tylko renderować z pamięci, aplikacja teraz ZMIENIA LINK.
+            // Zmiana linku automatycznie wyzwala funkcję processHashRoute().
+            if (view === 'home') {
+                window.location.hash = '#home';
+            } else if (view === 'app') {
+                const app = db.apps.find(a => a.id === params.id);
+                // Tworzymy bezpieczną dla URL nazwę (zamienia spacje na _)
+                const safeName = app ? encodeURIComponent(app.name.replace(/\s+/g, '_')) : 'unknown_app';
+                window.location.hash = `#apk-name=${safeName}-id=${params.id}`;
+            } else if (view === 'search') {
+                window.location.hash = `#search=${encodeURIComponent(params.query)}`;
             } else {
-                renderCoreView(view, params);
+                window.location.hash = `#${view}`;
             }
         }
 
@@ -1129,7 +1175,8 @@
         window.onload = async function() {
             await initFileDB(); 
             initDb();           
-            navigate('home');
+            // Odpalamy router na podstawie obecnego URL-a przy starcie
+            processHashRoute();
         };
     </script>
 </body>
