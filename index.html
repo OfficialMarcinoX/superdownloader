@@ -447,9 +447,29 @@
         function renderCoreView(view, params) {
             const appDiv = document.getElementById('app');
             appDiv.innerHTML = ''; 
-            if(view === 'home') renderHome(appDiv);
-            else if(view === 'search') renderSearch(appDiv, params.query);
-            else if(view === 'app') renderAppDetails(appDiv, params.id);
+            
+            if(view === 'home') {
+                renderHome(appDiv);
+            }
+            else if(view === 'search') {
+                renderSearch(appDiv, params.query);
+            }
+            else if(view === 'app') {
+                // SYSTEM OPTYMALIZACJI PAMIĘCI RAM (Leniwe Ładowanie)
+                // Ładuje ciężkie dane i opinie dopiero po wejściu w dedykowany link
+                appDiv.innerHTML = `
+                    <div class="flex flex-col items-center justify-center py-32 text-center animate-pulse">
+                        <div class="w-16 h-16 border-4 border-gray-200 border-t-play-green rounded-full animate-spin mb-6 mx-auto shadow-lg"></div>
+                        <h2 class="text-2xl font-black text-gray-900 mb-2">Fetching Data...</h2>
+                        <p class="text-gray-500 font-medium max-w-sm mx-auto">Smart Memory System: Pulling heavy application files and reviews from the network only on demand.</p>
+                    </div>
+                `;
+                
+                // Opóźnienie na doczytanie i zrenderowanie dużej ilości danych
+                setTimeout(() => {
+                    renderAppDetails(appDiv, params.id);
+                }, 600);
+            }
             else if(view === 'upload') renderUpload(appDiv);
             else if(view === 'admin') renderAdmin(appDiv);
             else if(view === 'settings') renderSettings(appDiv);
@@ -1022,9 +1042,23 @@
 
         window.goToUploadStep2 = function() {
             const name = document.getElementById('upName').value.trim();
+            const iconUrl = document.getElementById('upIcon').value.trim();
+            
             if(!name || !uploadState.rawFile) return showToast('Name and .apk are mandatory!', 'error');
-            uploadState.metadata = { name, shortDesc: document.getElementById('upShort').value.trim(), desc: document.getElementById('upDesc').value.trim(), icon: document.getElementById('upIcon').value.trim() };
-            document.getElementById('uploadStep1').classList.add('hidden'); document.getElementById('uploadStep2').classList.remove('hidden');
+            
+            // OCHRONA PRZED ZAPCHANIEM SIECI I PAMIĘCI RAM
+            if(iconUrl.startsWith('data:image')) {
+                return showToast('Base64 images use too much memory! Please use a clean URL (http://...)', 'error');
+            }
+
+            uploadState.metadata = { 
+                name, 
+                shortDesc: document.getElementById('upShort').value.trim(), 
+                desc: document.getElementById('upDesc').value.trim(), 
+                icon: iconUrl 
+            };
+            document.getElementById('uploadStep1').classList.add('hidden'); 
+            document.getElementById('uploadStep2').classList.remove('hidden');
         }
 
         window.backToUploadStep1 = function() {
