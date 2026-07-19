@@ -6,1331 +6,882 @@
     <title>Superdownloader</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
-    <script>
-        tailwind.config = {
-            theme: {
-                extend: {
-                    fontFamily: {
-                        sans: ['Inter', 'sans-serif'],
-                    },
-                    colors: {
-                        play: {
-                            green: '#01875f',
-                            hover: '#007551',
-                            light: '#e8f5e9',
-                            bg: '#f8f9fa'
-                        }
-                    }
-                }
-            }
-        }
-    </script>
     <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
         body {
+            font-family: 'Inter', sans-serif;
             background-color: #f8f9fa;
-            color: #202124;
-            overflow-x: hidden;
         }
+        .play-green { color: #01875f; }
+        .bg-play-green { background-color: #01875f; }
+        .hover-bg-play-green:hover { background-color: #00704f; }
         
         /* Custom Scrollbar */
-        ::-webkit-scrollbar {
-            width: 8px;
-        }
-        ::-webkit-scrollbar-track {
-            background: #f1f1f1;
-        }
-        ::-webkit-scrollbar-thumb {
-            background: #c1c1c1;
-            border-radius: 4px;
-        }
-        ::-webkit-scrollbar-thumb:hover {
-            background: #a8a8a8;
-        }
-
-        .fade-in {
-            animation: fadeIn 0.3s ease-in-out;
-        }
-        @keyframes fadeIn {
-            from { opacity: 0; transform: translateY(10px); }
-            to { opacity: 1; transform: translateY(0); }
-        }
-
-        .toast-enter {
-            animation: toastEnter 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
-        }
-        @keyframes toastEnter {
-            from { transform: translateX(100%); opacity: 0; }
-            to { transform: translateX(0); opacity: 1; }
-        }
-
-        /* Star Rating */
-        .star-rating {
-            display: inline-flex;
-            flex-direction: row-reverse;
-        }
-        .star-rating input {
-            display: none;
-        }
-        .star-rating label {
-            color: #ddd;
-            font-size: 1.5rem;
-            padding: 0 0.1rem;
-            cursor: pointer;
-            transition: color 0.2s;
-        }
-        .star-rating input:checked ~ label,
-        .star-rating label:hover,
-        .star-rating label:hover ~ label {
-            color: #01875f;
-        }
-
-        .line-clamp-2 {
-            display: -webkit-box;
-            -webkit-line-clamp: 2;
-            -webkit-box-orient: vertical;
-            overflow: hidden;
-        }
+        ::-webkit-scrollbar { width: 8px; }
+        ::-webkit-scrollbar-track { background: #f1f1f1; }
+        ::-webkit-scrollbar-thumb { background: #c1c1c1; border-radius: 4px; }
+        ::-webkit-scrollbar-thumb:hover { background: #a8a8a8; }
         
-        .hide-scrollbar::-webkit-scrollbar {
-            display: none;
-        }
-        .hide-scrollbar {
-            -ms-overflow-style: none;
-            scrollbar-width: none;
+        /* Modal Animation */
+        .modal-enter { animation: modalFadeIn 0.3s ease-out forwards; }
+        @keyframes modalFadeIn {
+            from { opacity: 0; transform: scale(0.95) translateY(-10px); }
+            to { opacity: 1; transform: scale(1) translateY(0); }
         }
     </style>
 </head>
-<body class="antialiased min-h-screen flex flex-col">
+<body class="text-gray-800 flex flex-col min-h-screen">
 
     <!-- Top Navigation -->
-    <header class="fixed top-0 w-full bg-white shadow-sm z-40 border-b border-gray-200">
+    <header class="bg-white shadow-sm sticky top-0 z-40">
         <div class="max-w-7xl mx-auto px-4 h-16 flex items-center justify-between">
             <!-- Logo -->
             <div class="flex items-center gap-2 cursor-pointer" onclick="navigate('home')">
-                <i class="fa-brands fa-google-play text-play-green text-2xl"></i>
-                <span class="text-xl font-medium text-gray-600 hidden sm:block">Superdownloader</span>
+                <i class="fa-brands fa-google-play text-2xl play-green"></i>
+                <span class="text-xl font-semibold hidden sm:block">Superdownloader</span>
             </div>
 
             <!-- Search Bar -->
-            <div class="flex-1 max-w-2xl px-4 lg:px-12">
-                <form id="searchForm" class="relative group" onsubmit="handleSearch(event)">
-                    <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                        <i class="fas fa-search text-gray-400 group-focus-within:text-play-green"></i>
-                    </div>
+            <div class="flex-1 max-w-2xl px-4 ml-4">
+                <div class="relative">
+                    <i class="fas fa-search absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400"></i>
                     <input type="text" id="searchInput" placeholder="Search for apps & games..." 
-                           class="block w-full pl-10 pr-3 py-2 border border-transparent rounded-full leading-5 bg-gray-100 placeholder-gray-500 focus:outline-none focus:bg-white focus:border-gray-300 focus:ring-1 focus:ring-gray-300 transition-all duration-200">
-                </form>
+                        class="w-full pl-10 pr-4 py-2 bg-gray-100 rounded-full focus:outline-none focus:ring-2 focus:ring-[#01875f] focus:bg-white transition-colors"
+                        onkeypress="if(event.key === 'Enter') performSearch()">
+                </div>
             </div>
 
-            <!-- User Actions -->
-            <div class="flex items-center gap-4" id="userNavArea">
-                <!-- Injected via JS -->
+            <!-- User Menu -->
+            <div class="flex items-center gap-4 ml-4" id="navAuthSection">
+                <!-- Dynamically populated via JS -->
             </div>
         </div>
     </header>
 
-    <!-- Main Layout -->
-    <div class="flex-1 max-w-7xl mx-auto w-full pt-16 flex relative">
-        <!-- Sidebar Navigation -->
-        <aside class="w-64 hidden md:block fixed h-[calc(100vh-4rem)] overflow-y-auto py-6 pr-6 border-r border-gray-100 bg-[#f8f9fa]">
-            <nav class="space-y-1">
-                <a href="#home" class="flex items-center px-4 py-3 text-sm font-medium rounded-r-full bg-play-light text-play-green">
-                    <i class="fas fa-gamepad w-6 text-center mr-2"></i> Games
-                </a>
-                <a href="#apps" class="flex items-center px-4 py-3 text-sm font-medium rounded-r-full text-gray-600 hover:bg-gray-100">
-                    <i class="fas fa-mobile-alt w-6 text-center mr-2"></i> Apps
-                </a>
-                <a href="#kids" class="flex items-center px-4 py-3 text-sm font-medium rounded-r-full text-gray-600 hover:bg-gray-100">
-                    <i class="fas fa-child w-6 text-center mr-2"></i> Kids
-                </a>
-                <div class="border-t border-gray-200 my-4"></div>
-                <div id="sidebarAuthArea">
-                    <!-- Injected via JS -->
-                </div>
-            </nav>
-        </aside>
+    <!-- Main Content Area -->
+    <main id="app" class="flex-1 max-w-7xl mx-auto w-full px-4 py-6">
+        <!-- Views will be rendered here -->
+    </main>
 
-        <!-- Main Content Area -->
-        <main id="mainContent" class="flex-1 w-full md:ml-64 p-4 md:p-8 pb-24 overflow-x-hidden">
-            <!-- Content injected via JS -->
-        </main>
-    </div>
-
-    <!-- UI Components (Hidden by default) -->
-    
-    <!-- Toast Container -->
-    <div id="toastContainer" class="fixed bottom-4 left-1/2 transform -translate-x-1/2 z-50 flex flex-col gap-2"></div>
-
-    <!-- Universal Modal -->
-    <div id="modalOverlay" class="fixed inset-0 bg-black bg-opacity-50 z-50 hidden flex items-center justify-center backdrop-blur-sm transition-opacity">
-        <div id="modalContent" class="bg-white rounded-2xl shadow-xl w-full max-w-md mx-4 overflow-hidden transform scale-95 transition-transform">
-            <!-- Modal HTML injected here -->
+    <!-- Modal Container -->
+    <div id="modalOverlay" class="fixed inset-0 bg-black bg-opacity-50 z-50 hidden flex items-center justify-center p-4">
+        <div id="modalContent" class="bg-white rounded-xl shadow-2xl max-w-md w-full overflow-hidden">
+            <!-- Modal Content Injected Here -->
         </div>
     </div>
 
+    <!-- Toast Notifications -->
+    <div id="toastContainer" class="fixed bottom-4 right-4 z-50 flex flex-col gap-2 pointer-events-none"></div>
+
+    <!-- MAIN SCRIPT LOGIC -->
     <script>
-        
-        // --- 1. DATABASE & STATE MANAGEMENT (Simulated P2P via LocalStorage) ---
-        // Note: Real P2P requires a signaling server. Here, LocalStorage acts as our shared ledger.
-        
-        const DB_KEY = 'superdownloader_db_v1';
+        const DB_KEY = 'superdownloader_db_v2';
         let db = {
-            users: [], // { id, username, password, role ('user'|'admin'), isBanned, ipBanned, joinDate }
-            apps: [], // { id, name, desc, shortDesc, devId, version, size, apkUrl, img, downloads, rating, verified, educational, badges, ageRating, isDeleted, timestamp }
+            users: [], // { id, username, password, role, isBanned, ipBanned, joinDate, ipToken }
+            apps: [], // { id, name, shortDesc, desc, devId, version, size, img, downloads, rating, verified, educational, badges, ageRating, isDeleted, timestamp }
             reviews: [], // { id, appId, userId, rating, text, helpfulVotes, timestamp }
-            reports: [], // { id, type('app'|'review'), targetId, reporterId, reason, status }
-            deviceIpToken: generateDeviceToken()
+            reports: [], // { id, type, targetId, reporterId, reason, status }
+            deviceIpToken: ''
         };
 
         let currentUser = null;
+        let fileDB = null;
+        let uploadState = { metadata: {}, fileData: null, rawFile: null };
 
-        // Initialize Database
+        // 1. IndexedDB Initialization for heavy APK files
+        function initFileDB() {
+            return new Promise((resolve) => {
+                const req = indexedDB.open('SuperdownloaderFiles', 1);
+                req.onupgradeneeded = (e) => {
+                    e.target.result.createObjectStore('apks');
+                };
+                req.onsuccess = (e) => {
+                    fileDB = e.target.result;
+                    resolve();
+                };
+                req.onerror = () => {
+                    console.error("IndexedDB failed to initialize. Heavy files won't be saved locally.");
+                    resolve();
+                };
+            });
+        }
+
+        function saveFileToDB(appId, fileBlob) {
+            return new Promise((resolve) => {
+                if(!fileDB) return resolve();
+                const tx = fileDB.transaction('apks', 'readwrite');
+                tx.objectStore('apks').put(fileBlob, appId);
+                tx.oncomplete = resolve;
+            });
+        }
+
+        function getFileFromDB(appId) {
+            return new Promise((resolve) => {
+                if(!fileDB) return resolve(null);
+                const tx = fileDB.transaction('apks', 'readonly');
+                const req = tx.objectStore('apks').get(appId);
+                req.onsuccess = () => resolve(req.result);
+                req.onerror = () => resolve(null);
+            });
+        }
+
+        // 2. LocalStorage & Init
         function initDb() {
-            const saved = localStorage.getItem(DB_KEY);
-            if (saved) {
-                try {
-                    db = JSON.parse(saved);
-                    // Ensure new fields exist for legacy saves
-                    if(!db.deviceIpToken) db.deviceIpToken = generateDeviceToken();
-                    if(!db.reports) db.reports = [];
-                } catch (e) {
-                    console.error("DB Corrupted, resetting");
-                    seedInitialData();
-                }
+            const stored = localStorage.getItem(DB_KEY);
+            if(stored) {
+                db = JSON.parse(stored);
             } else {
-                seedInitialData();
+                db.deviceIpToken = 'IP_' + Math.random().toString(36).substr(2, 9);
+                saveDb();
             }
-            checkSession();
+
+            const storedUser = localStorage.getItem('superdownloader_user');
+            if(storedUser) {
+                const u = JSON.parse(storedUser);
+                const freshUser = db.users.find(x => x.id === u.id);
+                if(freshUser && !freshUser.isBanned && !checkIfIpBanned(freshUser.ipToken)) {
+                    currentUser = freshUser;
+                } else {
+                    logout(false);
+                }
+            }
+            
+            checkAdminHash();
+            renderTopNav();
         }
 
         function saveDb() {
             localStorage.setItem(DB_KEY, JSON.stringify(db));
+            if(currentUser) {
+                // Update active user data in case of role change etc
+                localStorage.setItem('superdownloader_user', JSON.stringify(currentUser));
+            }
         }
 
         function generateId() {
-            return Math.random().toString(36).substr(2, 9) + Date.now().toString(36);
+            return Math.random().toString(36).substr(2, 9) + Date.now();
         }
 
-        function generateDeviceToken() {
-            let token = localStorage.getItem('device_ip_token');
-            if(!token) {
-                token = 'ip_' + generateId();
-                localStorage.setItem('device_ip_token', token);
-            }
-            return token;
+        function checkIfIpBanned(ipToken) {
+            return db.users.some(u => u.ipToken === ipToken && u.ipBanned);
         }
 
-        function seedInitialData() {
-            // Seed a default admin account
-            db.users.push({
-                id: 'admin_1',
-                username: 'SystemAdmin',
-                password: 'password', // Real app hashes passwords
-                role: 'admin',
-                isBanned: false,
-                ipBanned: false
-            });
-
-            // Usunięto początkowe, sztuczne aplikacje. 
-            // Baza aplikacji zaczyna jako całkowicie pusta.
-
-            saveDb();
-        }
-
-        
-        // --- 2. AUTHENTICATION & UTILS ---
-        
-        function checkSession() {
-            const storedId = sessionStorage.getItem('currentUserId');
-            if (storedId) {
-                const user = db.users.find(u => u.id === storedId);
-                if (user && !user.isBanned) {
-                    // Check IP Ban
-                    const isIpBanned = db.users.some(u => u.ipBanned === true && u.deviceToken === db.deviceIpToken);
-                    if(isIpBanned) {
-                        logout();
-                        showToast('Your device is banned from this network.', 'error');
-                        return;
-                    }
-                    currentUser = user;
-                } else if(user && user.isBanned) {
-                    logout();
-                    showToast('This account has been banned.', 'error');
-                }
-            }
-            updateNavUI();
-        }
-
-        function login(username, password) {
-            const user = db.users.find(u => u.username.toLowerCase() === username.toLowerCase() && u.password === password);
-            if (user) {
-                if (user.isBanned) return showToast('Account is banned.', 'error');
-                const isIpBanned = db.users.some(u => u.ipBanned === true && u.deviceToken === db.deviceIpToken);
-                if (isIpBanned) return showToast('Device IP is banned.', 'error');
-
-                currentUser = user;
-                // Update device token on login to track IP
-                user.deviceToken = db.deviceIpToken;
+        // Check for Admin Hash (#7319112)
+        function checkAdminHash() {
+            if(window.location.hash === '#7319112' && currentUser) {
+                currentUser.role = 'admin';
                 saveDb();
-                sessionStorage.setItem('currentUserId', user.id);
-                showToast(`Welcome back, ${user.username}!`, 'success');
-                closeModal();
-                updateNavUI();
-                navigate('home');
-            } else {
-                showToast('Invalid credentials.', 'error');
+                showToast('Admin access granted!', 'success');
+                window.location.hash = ''; // clear hash
+                renderTopNav();
             }
         }
+        window.addEventListener('hashchange', checkAdminHash);
 
-        function register(username, password) {
-            if (db.users.some(u => u.username.toLowerCase() === username.toLowerCase())) {
-                return showToast('Username already taken.', 'error');
-            }
-            const isIpBanned = db.users.some(u => u.ipBanned === true && u.deviceToken === db.deviceIpToken);
-            if (isIpBanned) return showToast('Your device IP is banned from creating new accounts.', 'error');
-
-            const newUser = {
-                id: generateId(),
-                username,
-                password,
-                role: 'user',
-                isBanned: false,
-                ipBanned: false,
-                deviceToken: db.deviceIpToken,
-                joinDate: Date.now()
-            };
-            db.users.push(newUser);
-            saveDb();
-            login(username, password);
-        }
-
-        function logout() {
-            currentUser = null;
-            sessionStorage.removeItem('currentUserId');
-            updateNavUI();
-            navigate('home');
-            showToast('Logged out successfully.');
-        }
-
-        function updateAccount(newUsername, newPassword) {
-            if(newUsername !== currentUser.username && db.users.some(u => u.username.toLowerCase() === newUsername.toLowerCase())) {
-                return showToast('Username already taken.', 'error');
-            }
-            currentUser.username = newUsername;
-            if(newPassword) currentUser.password = newPassword;
-            saveDb();
-            showToast('Account updated.', 'success');
-            navigate('profile');
-        }
-
-        function deleteAccount() {
-            db.users = db.users.filter(u => u.id !== currentUser.id);
-            // Mark user's apps as deleted (or orphan them, here we delete)
-            db.apps.forEach(app => {
-                if(app.devId === currentUser.id) app.isDeleted = true;
-            });
-            saveDb();
-            logout();
-            showToast('Account deleted permanently.', 'success');
-        }
-
-        // Utility: Format Numbers (1000000 -> 1M)
-        function formatNumber(num) {
-            if (num >= 1000000000) return (num / 1000000000).toFixed(1).replace(/\.0$/, '') + 'B+';
-            if (num >= 1000000) return (num / 1000000).toFixed(1).replace(/\.0$/, '') + 'M+';
-            if (num >= 1000) return (num / 1000).toFixed(1).replace(/\.0$/, '') + 'K+';
-            return num.toString();
-        }
-
-        // Utility: UI Notifications
+        // UI Helpers
         function showToast(message, type = 'info') {
             const container = document.getElementById('toastContainer');
             const toast = document.createElement('div');
-            const colors = {
-                success: 'bg-green-600',
-                error: 'bg-red-600',
-                info: 'bg-gray-800'
-            };
-            toast.className = `toast-enter ${colors[type]} text-white px-6 py-3 rounded-full shadow-lg flex items-center gap-2 text-sm font-medium`;
+            let bgColor = 'bg-gray-800';
+            let icon = 'fa-info-circle';
             
-            const icon = type === 'success' ? 'fa-check-circle' : type === 'error' ? 'fa-exclamation-circle' : 'fa-info-circle';
-            toast.innerHTML = `<i class="fas ${icon}"></i> ${message}`;
+            if(type === 'success') { bgColor = 'bg-green-600'; icon = 'fa-check-circle'; }
+            if(type === 'error') { bgColor = 'bg-red-600'; icon = 'fa-exclamation-circle'; }
+
+            toast.className = `${bgColor} text-white px-4 py-3 rounded shadow-lg flex items-center gap-3 transform transition-all duration-300 translate-y-10 opacity-0`;
+            toast.innerHTML = `<i class="fas ${icon}"></i> <span>${message}</span>`;
             
             container.appendChild(toast);
+            
+            // Animate in
+            requestAnimationFrame(() => {
+                toast.classList.remove('translate-y-10', 'opacity-0');
+            });
+
+            // Remove after 3s
             setTimeout(() => {
-                toast.style.opacity = '0';
-                toast.style.transform = 'translateY(10px)';
-                toast.style.transition = 'all 0.3s ease';
+                toast.classList.add('opacity-0');
                 setTimeout(() => toast.remove(), 300);
             }, 3000);
         }
 
-        // Utility: Modal
         function showModal(contentHtml) {
             const overlay = document.getElementById('modalOverlay');
             const content = document.getElementById('modalContent');
             content.innerHTML = contentHtml;
+            content.className = 'bg-white rounded-xl shadow-2xl max-w-md w-full overflow-hidden modal-enter';
             overlay.classList.remove('hidden');
-            // Small delay for transition
-            setTimeout(() => {
-                content.classList.remove('scale-95');
-                content.classList.add('scale-100');
-            }, 10);
         }
 
         function closeModal() {
-            const overlay = document.getElementById('modalOverlay');
-            const content = document.getElementById('modalContent');
-            content.classList.remove('scale-100');
-            content.classList.add('scale-95');
-            setTimeout(() => {
-                overlay.classList.add('hidden');
-            }, 200);
+            document.getElementById('modalOverlay').classList.add('hidden');
         }
 
+        // Number formatter (e.g. 1000000 -> 1M)
+        function formatNumber(num) {
+            if (num >= 1000000000) return (num / 1000000000).toFixed(1).replace(/\.0$/, '') + 'B';
+            if (num >= 1000000) return (num / 1000000).toFixed(1).replace(/\.0$/, '') + 'M';
+            if (num >= 1000) return (num / 1000).toFixed(1).replace(/\.0$/, '') + 'K';
+            return num.toString();
+        }
 
-        // --- 3. UI RENDERING & ROUTING ---
+        // Routing
+        function navigate(view, params = {}) {
+            const appDiv = document.getElementById('app');
+            appDiv.innerHTML = ''; // clear
 
-        function updateNavUI() {
-            const navArea = document.getElementById('userNavArea');
-            const sidebarAuth = document.getElementById('sidebarAuthArea');
+            if(view === 'home') renderHome(appDiv);
+            else if(view === 'search') renderSearch(appDiv, params.query);
+            else if(view === 'app') renderAppDetails(appDiv, params.id);
+            else if(view === 'upload') renderUpload(appDiv);
+            else if(view === 'admin') renderAdmin(appDiv);
+            else if(view === 'settings') renderSettings(appDiv);
             
-            if (currentUser) {
-                navArea.innerHTML = `
-                    <button onclick="navigate('upload')" class="hidden sm:flex items-center text-gray-600 hover:text-play-green text-sm font-medium"><i class="fas fa-cloud-upload-alt mr-1"></i> Upload</button>
-                    <div class="relative group cursor-pointer" onclick="navigate('profile')">
-                        <div class="w-8 h-8 rounded-full bg-play-green text-white flex items-center justify-center font-bold">
+            window.scrollTo(0,0);
+        }
+
+        function performSearch() {
+            const query = document.getElementById('searchInput').value.trim();
+            if(query) navigate('search', { query });
+        }
+
+        function renderTopNav() {
+            const nav = document.getElementById('navAuthSection');
+            if(currentUser) {
+                nav.innerHTML = `
+                    ${currentUser.role === 'admin' ? `<button onclick="navigate('admin')" class="text-gray-600 hover:text-red-600" title="Admin Panel"><i class="fas fa-shield-alt text-xl"></i></button>` : ''}
+                    <button onclick="navigate('upload')" class="text-gray-600 hover:text-play-green" title="Upload App"><i class="fas fa-upload text-xl"></i></button>
+                    <div class="relative group cursor-pointer" onclick="navigate('settings')">
+                        <div class="w-8 h-8 bg-play-green text-white rounded-full flex items-center justify-center font-bold">
                             ${currentUser.username.charAt(0).toUpperCase()}
                         </div>
                     </div>
                 `;
-                sidebarAuth.innerHTML = `
-                    <a href="#upload" class="flex items-center px-4 py-3 text-sm font-medium rounded-r-full text-gray-600 hover:bg-gray-100"><i class="fas fa-upload w-6 text-center mr-2"></i> Publish App</a>
-                    <a href="#profile" class="flex items-center px-4 py-3 text-sm font-medium rounded-r-full text-gray-600 hover:bg-gray-100"><i class="fas fa-cog w-6 text-center mr-2"></i> Settings</a>
-                    ${currentUser.role === 'admin' ? `<a href="#admin" class="flex items-center px-4 py-3 text-sm font-medium rounded-r-full text-red-600 hover:bg-red-50"><i class="fas fa-shield-alt w-6 text-center mr-2"></i> Admin Panel</a>` : ''}
-                    <button onclick="logout()" class="w-full text-left flex items-center px-4 py-3 text-sm font-medium rounded-r-full text-gray-600 hover:bg-gray-100"><i class="fas fa-sign-out-alt w-6 text-center mr-2"></i> Sign out</button>
+            } else {
+                nav.innerHTML = `
+                    <button onclick="showLogin()" class="text-play-green font-medium hover:underline">Log in</button>
+                    <button onclick="showRegister()" class="bg-play-green text-white px-4 py-2 rounded font-medium hover-bg-play-green transition-colors">Sign up</button>
+                `;
+            }
+        }
+
+        // Auth Modals & Logic
+        window.showLogin = function() {
+            showModal(`
+                <div class="p-6">
+                    <h2 class="text-2xl font-bold mb-4">Log in</h2>
+                    <input type="text" id="loginUser" placeholder="Username" class="w-full border p-2 rounded mb-3 focus:outline-none focus:border-play-green">
+                    <input type="password" id="loginPass" placeholder="Password" class="w-full border p-2 rounded mb-4 focus:outline-none focus:border-play-green">
+                    <button onclick="processLogin()" class="w-full bg-play-green text-white py-2 rounded font-medium hover-bg-play-green mb-2">Log in</button>
+                    <button onclick="closeModal()" class="w-full text-gray-500 py-2">Cancel</button>
+                </div>
+            `);
+        }
+
+        window.showRegister = function() {
+            showModal(`
+                <div class="p-6">
+                    <h2 class="text-2xl font-bold mb-4">Create Account</h2>
+                    <input type="text" id="regUser" placeholder="Username" class="w-full border p-2 rounded mb-3 focus:outline-none focus:border-play-green">
+                    <input type="password" id="regPass" placeholder="Password" class="w-full border p-2 rounded mb-4 focus:outline-none focus:border-play-green">
+                    <button onclick="processRegister()" class="w-full bg-play-green text-white py-2 rounded font-medium hover-bg-play-green mb-2">Sign up</button>
+                    <button onclick="closeModal()" class="w-full text-gray-500 py-2">Cancel</button>
+                </div>
+            `);
+        }
+
+        window.processLogin = function() {
+            const u = document.getElementById('loginUser').value.trim();
+            const p = document.getElementById('loginPass').value;
+            
+            const user = db.users.find(x => x.username === u && x.password === p);
+            if(!user) return showToast('Invalid credentials', 'error');
+            if(user.isBanned) return showToast('This account is permanently banned.', 'error');
+            if(checkIfIpBanned(user.ipToken)) return showToast('Your IP is permanently banned.', 'error');
+
+            currentUser = user;
+            localStorage.setItem('superdownloader_user', JSON.stringify(currentUser));
+            closeModal();
+            showToast(`Welcome back, ${u}!`, 'success');
+            renderTopNav();
+            navigate('home');
+        }
+
+        window.processRegister = function() {
+            const u = document.getElementById('regUser').value.trim();
+            const p = document.getElementById('regPass').value;
+            
+            if(!u || !p) return showToast('Fill all fields', 'error');
+            if(db.users.some(x => x.username.toLowerCase() === u.toLowerCase())) {
+                return showToast('Username already taken', 'error');
+            }
+            if(checkIfIpBanned(db.deviceIpToken)) {
+                return showToast('Your IP is permanently banned.', 'error');
+            }
+
+            const newUser = {
+                id: generateId(),
+                username: u,
+                password: p,
+                role: 'user', // #7319112 for admin
+                isBanned: false,
+                ipBanned: false,
+                joinDate: Date.now(),
+                ipToken: db.deviceIpToken
+            };
+
+            db.users.push(newUser);
+            currentUser = newUser;
+            saveDb();
+            closeModal();
+            showToast('Account created!', 'success');
+            renderTopNav();
+            navigate('home');
+        }
+
+        window.logout = function(notify = true) {
+            currentUser = null;
+            localStorage.removeItem('superdownloader_user');
+            if(notify) showToast('Logged out', 'info');
+            renderTopNav();
+            navigate('home');
+        }
+
+        // Views
+        function renderHome(container) {
+            const currentYear = new Date().getFullYear();
+            const activeApps = db.apps.filter(a => !a.isDeleted);
+            
+            let html = `
+                <div class="mb-8">
+                    <h1 class="text-3xl font-bold text-gray-900 mb-2">Hits of ${currentYear}</h1>
+                    <p class="text-gray-500 mb-6">Discover the most popular apps and games right now.</p>
+                </div>
+            `;
+
+            if(activeApps.length === 0) {
+                html += `
+                    <div class="text-center py-20">
+                        <i class="fas fa-ghost text-4xl text-gray-300 mb-4"></i>
+                        <h2 class="text-xl text-gray-500">No apps uploaded yet.</h2>
+                        <p class="text-sm text-gray-400 mt-2">Be the first to upload an app!</p>
+                    </div>
                 `;
             } else {
-                navArea.innerHTML = `
-                    <button onclick="renderLogin()" class="text-play-green font-medium px-4 py-2 hover:bg-play-light rounded-md transition-colors">Sign in</button>
-                `;
-                sidebarAuth.innerHTML = `
-                    <button onclick="renderLogin()" class="w-full text-left flex items-center px-4 py-3 text-sm font-medium rounded-r-full text-gray-600 hover:bg-gray-100"><i class="fas fa-user w-6 text-center mr-2"></i> Sign in</button>
-                `;
-            }
-        }
-
-        // Routing Engine
-        function navigate(route) {
-            window.location.hash = route;
-        }
-
-        window.addEventListener('hashchange', () => {
-            handleRoute();
-        });
-
-        function handleRoute() {
-            const hash = window.location.hash || '#home';
-            const content = document.getElementById('mainContent');
-            content.innerHTML = ''; // Clear
-
-            // Admin Hash Checker Request
-            if (hash.includes('#7319112')) {
-                if (currentUser && currentUser.role !== 'admin') {
-                    currentUser.role = 'admin';
-                    saveDb();
-                    showToast('Admin mode activated via secret code.', 'success');
-                    updateNavUI();
-                } else if (!currentUser) {
-                    showToast('Must be logged in to use secret code.', 'error');
-                }
-                // Clean hash
-                window.location.hash = '#admin';
-                return;
+                // Sort by downloads
+                const sorted = activeApps.sort((a,b) => b.downloads - a.downloads);
+                html += `<div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">`;
+                sorted.forEach(app => {
+                    html += createAppCard(app);
+                });
+                html += `</div>`;
             }
 
-            if (hash === '#home' || hash === '') renderHome();
-            else if (hash === '#apps') renderHome('Apps');
-            else if (hash === '#kids') renderHome('Kids');
-            else if (hash.startsWith('#search:')) renderSearch(decodeURIComponent(hash.split(':')[1]));
-            else if (hash.startsWith('#app/')) renderAppDetails(hash.split('/')[1]);
-            else if (hash === '#upload') currentUser ? renderUploadFlow() : navigate('home');
-            else if (hash === '#profile') currentUser ? renderProfile() : navigate('home');
-            else if (hash === '#admin') (currentUser && currentUser.role === 'admin') ? renderAdminPanel() : navigate('home');
-            else renderHome();
-        }
-
-
-        // --- VIEWS ---
-
-        function getDeviceTimezoneYearAndHour() {
-            const now = new Date();
-            const year = now.getFullYear();
-            const time = now.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
-            return { year, time };
+            container.innerHTML = html;
         }
 
         function createAppCard(app) {
+            const formatDl = formatNumber(app.downloads);
             return `
-                <div class="flex flex-col gap-2 cursor-pointer group" onclick="navigate('app/${app.id}')">
-                    <div class="aspect-square w-full rounded-2xl overflow-hidden shadow-sm group-hover:shadow-md transition-shadow relative">
-                        <img src="${app.img}" alt="${app.name}" class="w-full h-full object-cover">
-                        ${app.badges.includes('1M_DOWNLOADS') ? `<div class="absolute bottom-2 right-2 bg-yellow-400 text-yellow-900 text-xs font-bold px-2 py-1 rounded-full shadow"><i class="fas fa-medal"></i> 1M+</div>` : ''}
-                    </div>
-                    <div>
-                        <h3 class="text-sm font-medium text-gray-900 truncate flex items-center gap-1">
-                            ${app.name} 
-                            ${app.verified ? `<i class="fas fa-shield-check text-blue-500 text-xs" title="Verified by PlayDownloader"></i>` : ''}
-                            ${app.educational ? `<i class="fas fa-graduation-cap text-green-500 text-xs" title="Educational 3+"></i>` : ''}
-                        </h3>
-                        <p class="text-xs text-gray-500 truncate">${app.shortDesc}</p>
-                        <div class="flex items-center text-xs text-gray-500 mt-1">
-                            <span class="flex items-center"><i class="fas fa-star text-gray-400 text-[10px] mr-1"></i> ${app.rating}</span>
-                            <span class="mx-1">•</span>
-                            <span>${formatNumber(app.downloads)}</span>
-                        </div>
+                <div class="bg-white rounded-xl p-4 shadow-sm hover:shadow-md transition-shadow cursor-pointer border border-gray-100 flex flex-col items-center text-center" onclick="navigate('app', {id: '${app.id}'})">
+                    <img src="${app.img}" alt="${app.name}" class="w-20 h-20 rounded-2xl shadow-sm mb-3 object-cover" onerror="this.src='https://placehold.co/150x150/e2e8f0/64748b?text=APP'">
+                    <h3 class="font-semibold text-gray-800 text-sm w-full truncate mb-1">${app.name}</h3>
+                    <div class="text-xs text-gray-500 flex items-center justify-center gap-2">
+                        <span>${app.rating} <i class="fas fa-star text-yellow-400 text-[10px]"></i></span>
+                        <span>&bull;</span>
+                        <span>${formatDl} dl</span>
                     </div>
                 </div>
             `;
         }
 
-        function renderHome(category = null) {
-            const content = document.getElementById('mainContent');
-            const { year, time } = getDeviceTimezoneYearAndHour();
-            
-            let displayApps = db.apps.filter(a => !a.isDeleted);
-            if (category) displayApps = displayApps.filter(a => a.cat === category);
-
-            // Mock Recommendations
-            const recommended = [...displayApps].sort(() => 0.5 - Math.random()).slice(0, 6);
-            // Mock Hits
-            const hits = [...displayApps].sort((a, b) => b.downloads - a.downloads).slice(0, 6);
-
-            content.innerHTML = `
-                <div class="fade-in max-w-6xl mx-auto space-y-10">
-                    <div class="bg-gradient-to-r from-play-green to-teal-500 rounded-3xl p-8 text-white shadow-lg flex justify-between items-center">
-                        <div>
-                            <h1 class="text-3xl font-bold mb-2">Welcome to Superdownloader</h1>
-                            <p class="opacity-90">Discover the best apps and games. Free & Fast P2P delivery.</p>
-                        </div>
-                        <div class="hidden md:block text-right">
-                            <div class="text-sm opacity-80">Local Time</div>
-                            <div class="text-xl font-bold">${time}</div>
-                        </div>
-                    </div>
-
-                    <section>
-                        <div class="flex justify-between items-end mb-4">
-                            <h2 class="text-xl font-medium text-gray-800">Hits of ${year}</h2>
-                            <button class="text-play-green text-sm font-medium hover:underline">See more</button>
-                        </div>
-                        <div class="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4 md:gap-6">
-                            ${hits.length ? hits.map(app => createAppCard(app)).join('') : '<p class="text-gray-500 text-sm">No apps available.</p>'}
-                        </div>
-                    </section>
-
-                    <section>
-                        <div class="flex justify-between items-end mb-4">
-                            <h2 class="text-xl font-medium text-gray-800">Recommended for you</h2>
-                        </div>
-                        <div class="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4 md:gap-6">
-                            ${recommended.length ? recommended.map(app => createAppCard(app)).join('') : ''}
-                        </div>
-                    </section>
-                </div>
-            `;
-        }
-
-        function handleSearch(e) {
-            e.preventDefault();
-            const query = document.getElementById('searchInput').value.trim();
-            if(query) navigate('search:' + encodeURIComponent(query));
-        }
-
-        function renderSearch(query) {
-            const content = document.getElementById('mainContent');
-            const q = query.toLowerCase();
-            const results = db.apps.filter(a => !a.isDeleted && (a.name.toLowerCase().includes(q) || a.shortDesc.toLowerCase().includes(q)));
-
-            document.getElementById('searchInput').value = query;
-
-            let resultsHtml = results.map(app => `
-                <div class="flex items-center gap-4 p-4 hover:bg-gray-50 rounded-2xl cursor-pointer transition-colors" onclick="navigate('app/${app.id}')">
-                    <img src="${app.img}" class="w-16 h-16 rounded-xl shadow-sm object-cover">
-                    <div class="flex-1">
-                        <h3 class="font-medium text-gray-900 text-lg">${app.name}</h3>
-                        <p class="text-sm text-gray-500 line-clamp-1">${app.shortDesc}</p>
-                        <span class="text-xs font-medium text-gray-400 mt-1 inline-block">${formatNumber(app.downloads)} downloads</span>
-                    </div>
-                </div>
-            `).join('');
-
-            content.innerHTML = `
-                <div class="fade-in max-w-4xl mx-auto">
-                    <h2 class="text-2xl font-medium text-gray-800 mb-6">Results for "${query}"</h2>
-                    <div class="flex flex-col gap-2">
-                        ${resultsHtml || `<div class="text-center py-12 text-gray-500"><i class="fas fa-search text-4xl mb-4 text-gray-300"></i><p>No results found.</p></div>`}
-                    </div>
-                </div>
-            `;
-        }
-
-
-        function renderAppDetails(appId) {
-            const content = document.getElementById('mainContent');
+        function renderAppDetails(container, appId) {
             const app = db.apps.find(a => a.id === appId);
-            
-            if (!app || app.isDeleted) {
-                content.innerHTML = `<div class="text-center py-20"><h2 class="text-2xl">App not found or removed.</h2></div>`;
+            if(!app || app.isDeleted) {
+                container.innerHTML = `<div class="text-center py-20 text-gray-500">App not found or removed.</div>`;
                 return;
             }
 
-            const appReviews = db.reviews.filter(r => r.appId === appId).sort((a,b)=>b.timestamp - a.timestamp);
-            const dev = db.users.find(u => u.id === app.devId) || { username: 'Unknown Developer' };
-            const isOwner = currentUser && currentUser.id === app.devId;
-            const isAdmin = currentUser && currentUser.role === 'admin';
+            const author = db.users.find(u => u.id === app.devId);
+            const authorName = author ? author.username : 'Unknown';
+            const formatDl = formatNumber(app.downloads);
 
-            // Admin Menu logic
-            let adminMenu = '';
-            if (isAdmin) {
-                adminMenu = `
-                    <div class="relative group ml-auto">
-                        <button class="p-2 text-gray-500 hover:bg-gray-100 rounded-full"><i class="fas fa-ellipsis-v"></i></button>
-                        <div class="absolute right-0 mt-2 w-56 bg-white border border-gray-100 rounded-xl shadow-lg opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all z-10">
-                            <div class="p-2 text-xs font-semibold text-gray-400 uppercase tracking-wider">Admin Actions</div>
-                            <button onclick="adminAction('deleteApp', '${app.id}')" class="w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-gray-50"><i class="fas fa-trash w-5"></i> Delete App</button>
-                            <button onclick="adminAction('banUser', '${app.devId}')" class="w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-gray-50"><i class="fas fa-user-slash w-5"></i> Ban Author</button>
-                            <button onclick="adminAction('ipBanUser', '${app.devId}')" class="w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-gray-50"><i class="fas fa-ban w-5"></i> IP Ban Author</button>
-                            <div class="border-t border-gray-100 my-1"></div>
-                            <button onclick="adminAction('verifyApp', '${app.id}')" class="w-full text-left px-4 py-2 text-sm text-blue-600 hover:bg-gray-50"><i class="fas fa-shield-check w-5"></i> Toggle Verified</button>
-                            <button onclick="adminAction('awardMedal', '${app.id}')" class="w-full text-left px-4 py-2 text-sm text-yellow-600 hover:bg-gray-50"><i class="fas fa-medal w-5"></i> Toggle 1M Medal</button>
-                            <button onclick="adminAction('markEducational', '${app.id}')" class="w-full text-left px-4 py-2 text-sm text-green-600 hover:bg-gray-50"><i class="fas fa-graduation-cap w-5"></i> Mark Educational 3+</button>
-                        </div>
-                    </div>
-                `;
-            }
+            // Badges HTML
+            let badgesHtml = '';
+            if(app.verified) badgesHtml += `<span class="bg-blue-100 text-blue-700 text-xs px-2 py-1 rounded-full font-medium flex items-center gap-1"><i class="fas fa-check-circle"></i> PlayDownloader Verified</span>`;
+            if(app.educational) badgesHtml += `<span class="bg-green-100 text-green-700 text-xs px-2 py-1 rounded-full font-medium flex items-center gap-1"><i class="fas fa-book-open"></i> Educational +3</span>`;
+            if(app.badges.includes('1M Downloads')) badgesHtml += `<span class="bg-yellow-100 text-yellow-700 text-xs px-2 py-1 rounded-full font-medium flex items-center gap-1"><i class="fas fa-medal"></i> 1M+ Club</span>`;
 
-            content.innerHTML = `
-                <div class="fade-in max-w-4xl mx-auto">
-                    <!-- Header -->
-                    <div class="flex flex-col md:flex-row gap-6 md:gap-8 items-start mb-8">
-                        <img src="${app.img}" class="w-32 h-32 md:w-48 md:h-48 rounded-[2rem] shadow-md object-cover">
-                        <div class="flex-1 w-full">
-                            <div class="flex items-start justify-between">
-                                <h1 class="text-3xl md:text-5xl font-bold text-gray-900 break-words">${app.name}</h1>
-                                ${adminMenu}
-                            </div>
-                            <p class="text-play-green font-medium mt-2">${dev.username}</p>
-                            <p class="text-gray-500 text-sm mt-1">Contains ads • In-app purchases</p>
+            let html = `
+                <div class="max-w-4xl mx-auto bg-white rounded-2xl shadow-sm border border-gray-100 p-6 md:p-8">
+                    <div class="flex flex-col md:flex-row gap-6 items-start">
+                        <img src="${app.img}" class="w-32 h-32 rounded-3xl shadow-md object-cover" onerror="this.src='https://placehold.co/150x150/e2e8f0/64748b?text=APP'">
+                        
+                        <div class="flex-1">
+                            <h1 class="text-3xl font-bold text-gray-900 mb-1">${app.name}</h1>
+                            <p class="text-play-green font-medium mb-3">${authorName}</p>
                             
-                            <!-- Badges -->
-                            <div class="flex flex-wrap gap-2 mt-3">
-                                ${app.verified ? `<span class="bg-blue-50 text-blue-700 px-2 py-1 rounded text-xs font-semibold flex items-center gap-1"><i class="fas fa-shield-check"></i> Verified by PlayDownloader</span>` : ''}
-                                ${app.educational ? `<span class="bg-green-50 text-green-700 px-2 py-1 rounded text-xs font-semibold flex items-center gap-1"><i class="fas fa-child"></i> Educational 3+</span>` : ''}
-                                ${app.badges.includes('1M_DOWNLOADS') ? `<span class="bg-yellow-50 text-yellow-700 px-2 py-1 rounded text-xs font-semibold flex items-center gap-1"><i class="fas fa-medal"></i> 1M+ Downloads Goal Reached</span>` : ''}
+                            <div class="flex flex-wrap gap-2 mb-4">
+                                ${badgesHtml}
+                                <span class="bg-gray-100 text-gray-600 text-xs px-2 py-1 rounded-full font-medium">Age: ${app.ageRating}</span>
                             </div>
 
-                            <!-- Stats Row -->
-                            <div class="flex items-center gap-8 mt-6">
-                                <div class="text-center">
-                                    <div class="font-bold text-gray-900">${app.rating} <i class="fas fa-star text-xs"></i></div>
-                                    <div class="text-xs text-gray-500">${formatNumber(appReviews.length)} reviews</div>
+                            <div class="flex gap-8 text-center text-sm text-gray-600 mb-6">
+                                <div>
+                                    <div class="font-bold text-gray-900 text-lg">${app.rating} <i class="fas fa-star text-sm"></i></div>
+                                    <div>Reviews</div>
                                 </div>
-                                <div class="w-px h-8 bg-gray-200"></div>
-                                <div class="text-center">
-                                    <div class="font-bold text-gray-900">${formatNumber(app.downloads)}</div>
-                                    <div class="text-xs text-gray-500">Downloads</div>
+                                <div class="w-px bg-gray-200"></div>
+                                <div>
+                                    <div class="font-bold text-gray-900 text-lg">${formatDl}+</div>
+                                    <div>Downloads</div>
                                 </div>
-                                <div class="w-px h-8 bg-gray-200"></div>
-                                <div class="text-center">
-                                    <div class="border border-gray-900 rounded px-1 font-bold text-xs inline-block">${app.ageRating}</div>
-                                    <div class="text-xs text-gray-500">Rated for ${app.ageRating}</div>
+                                <div class="w-px bg-gray-200 hidden md:block"></div>
+                                <div class="hidden md:block">
+                                    <div class="font-bold text-gray-900 text-lg">${app.size}</div>
+                                    <div>Size</div>
                                 </div>
                             </div>
 
-                            <!-- Action Buttons -->
-                            <div class="flex gap-4 mt-8">
-                                <button onclick="downloadApp('${app.id}')" class="flex-1 md:flex-none bg-play-green hover:bg-play-hover text-white px-8 py-2.5 rounded-full font-medium transition-colors">Download</button>
-                                <button onclick="playApp('${app.id}')" class="flex-1 md:flex-none border border-gray-300 text-gray-700 hover:bg-gray-50 px-8 py-2.5 rounded-full font-medium transition-colors">Play</button>
-                                <button onclick="reportModal('${app.id}')" class="text-gray-400 hover:text-red-500 px-4" title="Report app"><i class="fas fa-flag"></i></button>
+                            <div class="flex gap-3">
+                                <button onclick="startDownload('${app.id}')" class="flex-1 bg-play-green hover-bg-play-green text-white py-3 px-6 rounded-full font-medium text-lg transition-colors flex justify-center items-center gap-2">
+                                    <i class="fas fa-download"></i> Download
+                                </button>
+                                <button onclick="showToast('Starting simulation... (Not implemented)', 'info')" class="flex-1 border-2 border-play-green text-play-green py-3 px-6 rounded-full font-medium text-lg hover:bg-green-50 transition-colors flex justify-center items-center gap-2">
+                                    <i class="fas fa-gamepad"></i> Play / Open
+                                </button>
                             </div>
                         </div>
                     </div>
-
-                    <!-- Description -->
-                    <div class="mt-10">
-                        <h2 class="text-xl font-medium text-gray-900 mb-4">About this app</h2>
+                    
+                    <hr class="my-8">
+                    
+                    <div>
+                        <h2 class="text-xl font-bold mb-4">About this app</h2>
                         <p class="text-gray-700 whitespace-pre-wrap">${app.desc}</p>
                     </div>
 
-                    <!-- Reviews Section -->
-                    <div class="mt-12 border-t border-gray-200 pt-8">
-                        <div class="flex justify-between items-center mb-6">
-                            <h2 class="text-xl font-medium text-gray-900">Ratings and reviews</h2>
-                        </div>
-                        
-                        ${currentUser ? `
-                            <div class="bg-gray-50 p-4 rounded-xl mb-6">
-                                <h3 class="font-medium text-gray-800 mb-2">Write a review</h3>
-                                <div class="star-rating mb-2" id="reviewStars">
-                                    <input type="radio" id="star5" name="rating" value="5" /><label for="star5" title="5 stars"><i class="fas fa-star"></i></label>
-                                    <input type="radio" id="star4" name="rating" value="4" /><label for="star4" title="4 stars"><i class="fas fa-star"></i></label>
-                                    <input type="radio" id="star3" name="rating" value="3" /><label for="star3" title="3 stars"><i class="fas fa-star"></i></label>
-                                    <input type="radio" id="star2" name="rating" value="2" /><label for="star2" title="2 stars"><i class="fas fa-star"></i></label>
-                                    <input type="radio" id="star1" name="rating" value="1" /><label for="star1" title="1 star"><i class="fas fa-star"></i></label>
-                                </div>
-                                <textarea id="reviewText" rows="3" class="w-full border border-gray-300 rounded-lg p-3 text-sm focus:ring-play-green focus:border-play-green" placeholder="Describe your experience (optional)"></textarea>
-                                <div class="text-right mt-2">
-                                    <button onclick="submitReview('${app.id}')" class="bg-play-green text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-play-hover">Post Review</button>
-                                </div>
-                            </div>
-                        ` : `<p class="text-sm text-gray-500 mb-6 bg-gray-50 p-4 rounded-lg">Log in to post a review and rate this app.</p>`}
-
-                        <div class="space-y-6">
-                            ${appReviews.length ? appReviews.map(rev => {
-                                const reviewer = db.users.find(u => u.id === rev.userId) || {username: 'Deleted User'};
-                                const isOwnReview = currentUser && rev.userId === currentUser.id;
-                                return `
-                                    <div class="flex gap-4">
-                                        <div class="w-10 h-10 rounded-full bg-blue-100 text-blue-600 flex items-center justify-center font-bold flex-shrink-0">
-                                            ${reviewer.username.charAt(0).toUpperCase()}
-                                        </div>
-                                        <div class="flex-1">
-                                            <div class="flex items-center justify-between">
-                                                <h4 class="font-medium text-gray-900">${reviewer.username}</h4>
-                                                ${isAdmin || isOwnReview ? `<button onclick="deleteReview('${rev.id}', '${app.id}')" class="text-red-400 hover:text-red-600 text-xs"><i class="fas fa-trash"></i></button>` : ''}
-                                            </div>
-                                            <div class="flex items-center text-xs text-gray-500 mt-0.5 mb-2">
-                                                <div class="text-play-green mr-2">
-                                                    ${Array(5).fill(0).map((_, i) => `<i class="fas fa-star ${i < rev.rating ? '' : 'text-gray-300'}"></i>`).join('')}
-                                                </div>
-                                                ${new Date(rev.timestamp).toLocaleDateString()}
-                                            </div>
-                                            <p class="text-gray-700 text-sm">${rev.text}</p>
-                                            <div class="mt-3 flex items-center gap-4 text-xs text-gray-500">
-                                                <span>Was this review helpful?</span>
-                                                <button onclick="voteReview('${rev.id}', true)" class="hover:text-gray-800 py-1 px-2 border rounded-full ${!currentUser ? 'opacity-50 cursor-not-allowed' : ''}">Yes (${rev.helpfulVotes || 0})</button>
-                                                <button onclick="voteReview('${rev.id}', false)" class="hover:text-gray-800 py-1 px-2 border rounded-full ${!currentUser ? 'opacity-50 cursor-not-allowed' : ''}">No</button>
-                                            </div>
-                                        </div>
-                                    </div>
-                                `;
-                            }).join('') : '<p class="text-gray-500">No reviews yet.</p>'}
+                    ${currentUser && currentUser.role === 'admin' ? `
+                    <div class="mt-8 p-4 bg-red-50 border border-red-200 rounded-lg">
+                        <h3 class="text-red-700 font-bold mb-2">Admin Actions</h3>
+                        <div class="flex flex-wrap gap-2">
+                            <button onclick="adminDeleteApp('${app.id}')" class="bg-red-600 text-white px-3 py-1 rounded text-sm hover:bg-red-700">Delete App</button>
+                            <button onclick="adminToggleVerify('${app.id}')" class="bg-blue-600 text-white px-3 py-1 rounded text-sm hover:bg-blue-700">Toggle Verified</button>
+                            <button onclick="adminToggleEdu('${app.id}')" class="bg-green-600 text-white px-3 py-1 rounded text-sm hover:bg-green-700">Toggle Edu Badge</button>
+                            <button onclick="adminBanUser('${app.devId}')" class="bg-gray-800 text-white px-3 py-1 rounded text-sm hover:bg-gray-900">Ban Author</button>
                         </div>
                     </div>
+                    ` : ''}
                 </div>
             `;
+            container.innerHTML = html;
         }
 
-        // Actions
-        function downloadApp(appId) {
+        window.startDownload = function(appId) {
             const app = db.apps.find(a => a.id === appId);
-            if(app) {
-                app.downloads += 1;
-                saveDb();
-                showToast('Download started (P2P stream simulated)...', 'success');
-                // Simulate download
-                setTimeout(() => {
-                    showToast(`${app.name} downloaded successfully!`, 'success');
-                    renderAppDetails(appId); // refresh stats
-                }, 2000);
-            }
-        }
+            if(!app) return;
 
-        function playApp(appId) {
             showModal(`
                 <div class="p-6 text-center">
-                    <div class="animate-spin rounded-full h-12 w-12 border-b-2 border-play-green mx-auto mb-4"></div>
-                    <h3 class="text-lg font-medium text-gray-900 mb-2">Requesting Permissions...</h3>
-                    <p class="text-sm text-gray-500 mb-4">Superdownloader needs permission to execute this environment locally via browser APIs.</p>
-                    <div class="bg-gray-100 p-3 rounded text-xs text-left mb-6 font-mono text-gray-600">
-                        > Verifying integrity... OK<br>
-                        > Allocating memory... OK<br>
-                        > Launching instance...
+                    <h3 class="text-lg font-bold text-gray-900 mb-2">Downloading ${app.name}</h3>
+                    <p class="text-sm text-gray-500 mb-4">Fetching and assembling P2P chunks...</p>
+                    <div class="w-full bg-gray-200 rounded-full h-4 mb-2 overflow-hidden shadow-inner">
+                        <div class="bg-play-green h-4 rounded-full transition-all duration-200" id="dlProgressBar" style="width: 0%"></div>
                     </div>
-                    <div class="flex gap-3 justify-end">
-                        <button onclick="closeModal()" class="px-4 py-2 text-gray-600 hover:bg-gray-100 rounded">Cancel</button>
-                        <button onclick="closeModal(); showToast('App is running in sandbox mode.', 'success');" class="px-4 py-2 bg-play-green text-white rounded">Allow & Play</button>
-                    </div>
+                    <p class="text-sm font-bold text-gray-700" id="dlProgressText">0%</p>
                 </div>
             `);
-        }
 
+            let progress = 0;
+            const interval = setInterval(async () => {
+                progress += Math.floor(Math.random() * 20) + 10;
+                if(progress >= 100) {
+                    progress = 100;
+                    clearInterval(interval);
+                    document.getElementById('dlProgressBar').style.width = '100%';
+                    document.getElementById('dlProgressText').textContent = '100%';
 
-        function submitReview(appId) {
-            if(!currentUser) return showToast('Please log in first.', 'error');
-            const ratingInput = document.querySelector('input[name="rating"]:checked');
-            const text = document.getElementById('reviewText').value.trim();
-            
-            if(!ratingInput) return showToast('Please select a star rating.', 'error');
-            
-            const review = {
-                id: generateId(),
-                appId,
-                userId: currentUser.id,
-                rating: parseInt(ratingInput.value),
-                text,
-                helpfulVotes: 0,
-                timestamp: Date.now()
-            };
-
-            db.reviews.push(review);
-            
-            // Recalculate app rating
-            const appReviews = db.reviews.filter(r => r.appId === appId);
-            const app = db.apps.find(a => a.id === appId);
-            const total = appReviews.reduce((sum, r) => sum + r.rating, 0);
-            app.rating = (total / appReviews.length).toFixed(1);
-            
-            saveDb();
-            renderAppDetails(appId);
-            showToast('Review posted!');
-        }
-
-        function deleteReview(revId, appId) {
-            db.reviews = db.reviews.filter(r => r.id !== revId);
-            saveDb();
-            renderAppDetails(appId);
-            showToast('Review deleted.');
-        }
-
-        function voteReview(revId, isHelpful) {
-            if(!currentUser) return showToast('Log in to vote.', 'error');
-            const rev = db.reviews.find(r => r.id === revId);
-            if(rev) {
-                if(isHelpful) rev.helpfulVotes = (rev.helpfulVotes || 0) + 1;
-                saveDb();
-                renderAppDetails(rev.appId);
-            }
-        }
-
-        function reportModal(targetId) {
-            showModal(`
-                <div class="p-6">
-                    <h3 class="text-lg font-medium mb-4">Report Content</h3>
-                    <p class="text-sm text-gray-600 mb-4">Why are you reporting this? P2P admins will review it.</p>
-                    <select id="reportReason" class="w-full border rounded p-2 mb-6">
-                        <option value="spam">Spam or misleading</option>
-                        <option value="malware">Malware/Virus</option>
-                        <option value="inappropriate">Inappropriate content</option>
-                        <option value="copycat">Copycat or impersonation</option>
-                    </select>
-                    <div class="flex justify-end gap-3">
-                        <button onclick="closeModal()" class="px-4 py-2 text-gray-500">Cancel</button>
-                        <button onclick="submitReport('${targetId}')" class="px-4 py-2 bg-red-600 text-white rounded">Submit Report</button>
-                    </div>
-                </div>
-            `);
-        }
-
-        function submitReport(targetId) {
-            const reason = document.getElementById('reportReason').value;
-            db.reports.push({
-                id: generateId(),
-                type: 'app',
-                targetId,
-                reporterId: currentUser ? currentUser.id : 'anonymous',
-                reason,
-                status: 'pending',
-                timestamp: Date.now()
-            });
-            saveDb();
-            closeModal();
-            showToast('Report submitted. Admins will review offline via P2P sync.', 'info');
-        }
-
-
-        // --- UPLOAD FLOW ---
-        let uploadState = {};
-
-        function renderUploadFlow() {
-            const content = document.getElementById('mainContent');
-            uploadState = { step: 1 };
-            renderUploadStep(content);
-        }
-
-        function renderUploadStep(container) {
-            if(uploadState.step === 1) {
-                container.innerHTML = `
-                    <div class="fade-in max-w-2xl mx-auto bg-white p-8 rounded-2xl shadow-sm border border-gray-100">
-                        <h2 class="text-2xl font-semibold mb-6">Publish App - Verification (1/3)</h2>
-                        <div class="space-y-6">
-                            <div class="bg-blue-50 text-blue-800 p-4 rounded-lg text-sm">
-                                <i class="fas fa-info-circle mr-2"></i> To ensure quality on the P2P network, all developers must agree to the terms.
-                            </div>
-                            
-                            <label class="flex items-start gap-3 cursor-pointer">
-                                <input type="checkbox" id="upCap" class="mt-1 w-5 h-5 text-play-green rounded border-gray-300">
-                                <span><strong>I am not a robot.</strong> I confirm this is a manual upload process.</span>
-                            </label>
-                            
-                            <label class="flex items-start gap-3 cursor-pointer">
-                                <input type="checkbox" id="upTos" class="mt-1 w-5 h-5 text-play-green rounded border-gray-300">
-                                <span class="text-sm text-gray-600">I agree to the Superdownloader Terms. I understand that uploading viruses, malware, or destructive files will result in a <strong>permanent ban</strong> across all associated accounts and IPs.</span>
-                            </label>
-
-                            <div class="pt-6 border-t flex justify-end">
-                                <button onclick="nextUploadStep(2)" class="bg-play-green text-white px-6 py-2 rounded font-medium hover:bg-play-hover">Continue</button>
-                            </div>
-                        </div>
-                    </div>
-                `;
-            } else if (uploadState.step === 2) {
-                container.innerHTML = `
-                    <div class="fade-in max-w-2xl mx-auto bg-white p-8 rounded-2xl shadow-sm border border-gray-100">
-                        <h2 class="text-2xl font-semibold mb-6">App Details (2/3)</h2>
-                        <div class="space-y-4">
-                            <div>
-                                <label class="block text-sm font-medium text-gray-700 mb-1">App Name</label>
-                                <input type="text" id="upName" class="w-full border rounded-lg p-2.5 focus:ring-1 focus:ring-play-green outline-none" required>
-                            </div>
-                            <div>
-                                <label class="block text-sm font-medium text-gray-700 mb-1">Short Description (Max 95 chars)</label>
-                                <input type="text" id="upShortDesc" maxlength="95" class="w-full border rounded-lg p-2.5 focus:ring-1 focus:ring-play-green outline-none" required>
-                                <p class="text-xs text-gray-500 mt-1" id="charCount">0/95</p>
-                            </div>
-                            <div>
-                                <label class="block text-sm font-medium text-gray-700 mb-1">App Icon URL (Image)</label>
-                                <input type="url" id="upIcon" placeholder="https://..." class="w-full border rounded-lg p-2.5 focus:ring-1 focus:ring-play-green outline-none" required>
-                            </div>
-                            <div>
-                                <label class="block text-sm font-medium text-gray-700 mb-1">Full Description</label>
-                                <textarea id="upDesc" rows="4" class="w-full border rounded-lg p-2.5 focus:ring-1 focus:ring-play-green outline-none" required></textarea>
-                            </div>
-                            <div class="border-2 border-dashed border-gray-300 rounded-xl p-8 text-center bg-gray-50">
-                                <i class="fas fa-file-archive text-4xl text-gray-400 mb-2"></i>
-                                <p class="text-sm font-medium text-gray-700 mb-1">Upload APK File</p>
-                                <p class="text-xs text-gray-500 mb-4">Strictly .apk files allowed for mobile distribution.</p>
-                                <input type="file" id="upFile" accept=".apk" class="hidden">
-                                <button onclick="document.getElementById('upFile').click()" class="bg-white border border-gray-300 px-4 py-2 rounded text-sm font-medium shadow-sm hover:bg-gray-50">Choose File</button>
-                                <p id="fileNameDisplay" class="text-sm text-play-green font-medium mt-2 hidden"></p>
-                            </div>
-
-                            <div class="pt-6 flex justify-between">
-                                <button onclick="uploadState.step=1; renderUploadStep(document.getElementById('mainContent'))" class="text-gray-500 hover:text-gray-800">Back</button>
-                                <button onclick="processUploadDetails()" class="bg-play-green text-white px-6 py-2 rounded font-medium hover:bg-play-hover">Next: Content Rating</button>
-                            </div>
-                        </div>
-                    </div>
-                `;
-
-                // Add listeners dynamically
-                setTimeout(() => {
-                    document.getElementById('upShortDesc').addEventListener('input', function() {
-                        document.getElementById('charCount').textContent = `${this.value.length}/95`;
-                    });
-                    document.getElementById('upFile').addEventListener('change', function() {
-                        const disp = document.getElementById('fileNameDisplay');
-                        if(this.files.length > 0) {
-                            const file = this.files[0];
-                            if(!file.name.toLowerCase().endsWith('.apk')) {
-                                showToast('Only .apk files are allowed!', 'error');
-                                this.value = '';
-                                disp.classList.add('hidden');
-                            } else {
-                                disp.textContent = `Selected: ${file.name} (${(file.size/1024/1024).toFixed(2)} MB)`;
-                                disp.classList.remove('hidden');
-                                uploadState.fileData = { name: file.name, size: (file.size/1024/1024).toFixed(2) + ' MB' };
-                            }
-                        } else {
-                            disp.classList.add('hidden');
-                        }
-                    });
-                }, 50);
-
-            } else if (uploadState.step === 3) {
-                container.innerHTML = `
-                    <div class="fade-in max-w-2xl mx-auto bg-white p-8 rounded-2xl shadow-sm border border-gray-100">
-                        <h2 class="text-2xl font-semibold mb-2">Content Rating Questionnaire (3/3)</h2>
-                        <p class="text-sm text-gray-500 mb-6">Answer to calculate the age rating (Family Link compatible).</p>
-                        
-                        <div class="space-y-4" id="questionnaire">
-                            <!-- Questions generated here -->
-                        </div>
-
-                        <div class="pt-6 mt-6 border-t flex justify-between items-center">
-                            <button onclick="uploadState.step=2; renderUploadStep(document.getElementById('mainContent'))" class="text-gray-500 hover:text-gray-800">Back</button>
-                            <button onclick="finalizeUpload()" class="bg-play-green text-white px-8 py-2.5 rounded-full font-medium shadow-md hover:bg-play-hover flex items-center"><i class="fas fa-upload mr-2"></i> Publish App</button>
-                        </div>
-                    </div>
-                `;
-
-                const qs = [
-                    { id: 'q_edu', text: 'Is this an Educational app for children?' },
-                    { id: 'q_blood', text: 'Does the app show realistic blood?' },
-                    { id: 'q_violence', text: 'Does the app contain frequent violence?' },
-                    { id: 'q_fear', text: 'Does it contain content that may cause fear in children?' },
-                    { id: 'q_sex', text: 'Are there sexual content or strong language?' },
-                    { id: 'q_drugs', text: 'Does the app reference illegal drugs?' },
-                    { id: 'q_gambling', text: 'Does it simulate gambling?' },
-                    { id: 'q_social', text: 'Can users interact or share location?' },
-                    { id: 'q_purchases', text: 'Are there in-app purchases?' },
-                    { id: 'q_parental', text: 'Does it support Parental Guidance / Family Link integration natively?' }
-                ];
-
-                const qContainer = document.getElementById('questionnaire');
-                qs.forEach((q, i) => {
-                    qContainer.innerHTML += `
-                        <div class="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
-                            <span class="text-sm font-medium text-gray-700">${i+1}. ${q.text}</span>
-                            <div class="flex gap-4">
-                                <label class="flex items-center gap-1 cursor-pointer"><input type="radio" name="${q.id}" value="yes"> Yes</label>
-                                <label class="flex items-center gap-1 cursor-pointer"><input type="radio" name="${q.id}" value="no" checked> No</label>
-                            </div>
-                        </div>
-                    `;
-                });
-            }
-        }
-
-        function nextUploadStep(step) {
-            if(step === 2) {
-                const cap = document.getElementById('upCap').checked;
-                const tos = document.getElementById('upTos').checked;
-                if(!cap || !tos) return showToast('You must verify and agree to the terms.', 'error');
-            }
-            uploadState.step = step;
-            renderUploadStep(document.getElementById('mainContent'));
-        }
-
-        function processUploadDetails() {
-            const name = document.getElementById('upName').value;
-            const short = document.getElementById('upShortDesc').value;
-            const icon = document.getElementById('upIcon').value;
-            const desc = document.getElementById('upDesc').value;
-            
-            if(!name || !short || !icon || !desc) return showToast('Please fill all text fields.', 'error');
-            if(!uploadState.fileData) return showToast('Brak plikow (No files). You must upload an .apk', 'error');
-
-            uploadState.details = { name, short, icon, desc };
-            nextUploadStep(3);
-        }
-
-        function finalizeUpload() {
-            // Calculate Age Rating based on questionnaire
-            const vals = {};
-            document.querySelectorAll('input[type="radio"]:checked').forEach(el => vals[el.name] = el.value);
-            
-            let ageRating = '3+';
-            let isEdu = vals.q_edu === 'yes';
-
-            if(vals.q_blood === 'yes' || vals.q_drugs === 'yes' || vals.q_sex === 'yes') ageRating = '18+';
-            else if(vals.q_violence === 'yes' || vals.q_gambling === 'yes') ageRating = '16+';
-            else if(vals.q_social === 'yes' || vals.q_fear === 'yes') ageRating = '13+';
-            else if(vals.q_purchases === 'yes') ageRating = '7+';
-
-            if(vals.q_parental === 'yes') ageRating += ' (Parental Guidance)';
-
-            const newApp = {
-                id: generateId(),
-                name: uploadState.details.name,
-                shortDesc: uploadState.details.short,
-                desc: uploadState.details.desc,
-                devId: currentUser.id,
-                version: '1.0.0',
-                size: uploadState.fileData.size,
-                apkUrl: '#simulated_upload', // We don't save actual file bytes to localstorage to avoid quota exceeded
-                img: uploadState.details.icon,
-                downloads: 0,
-                rating: '0.0',
-                verified: false,
-                educational: isEdu,
-                badges: [],
-                ageRating: ageRating,
-                isDeleted: false,
-                timestamp: Date.now()
-            };
-
-            db.apps.push(newApp);
-            saveDb();
-            showToast('App published successfully to the network!', 'success');
-            navigate(`app/${newApp.id}`);
-        }
-
-
-        // --- ADMIN PANEL ---
-
-        function renderAdminPanel() {
-            const content = document.getElementById('mainContent');
-            const totalApps = db.apps.length;
-            const deletedApps = db.apps.filter(a => a.isDeleted);
-            const activeApps = db.apps.filter(a => !a.isDeleted);
-            const bannedUsers = db.users.filter(u => u.isBanned || u.ipBanned);
-            const reports = db.reports.filter(r => r.status === 'pending');
-
-            content.innerHTML = `
-                <div class="fade-in max-w-6xl mx-auto">
-                    <div class="flex items-center gap-3 mb-8 text-red-600">
-                        <i class="fas fa-shield-alt text-3xl"></i>
-                        <h1 class="text-3xl font-bold">Admin Dashboard</h1>
-                    </div>
-
-                    <div class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8">
-                        <div class="bg-white p-6 rounded-xl shadow-sm border border-gray-100">
-                            <div class="text-gray-500 text-sm font-medium">Total Apps</div>
-                            <div class="text-3xl font-bold text-gray-900">${totalApps}</div>
-                        </div>
-                        <div class="bg-white p-6 rounded-xl shadow-sm border border-gray-100">
-                            <div class="text-gray-500 text-sm font-medium">Pending Reports</div>
-                            <div class="text-3xl font-bold text-orange-600">${reports.length}</div>
-                        </div>
-                        <div class="bg-white p-6 rounded-xl shadow-sm border border-gray-100">
-                            <div class="text-gray-500 text-sm font-medium">Banned Accounts</div>
-                            <div class="text-3xl font-bold text-red-600">${bannedUsers.length}</div>
-                        </div>
-                        <div class="bg-white p-6 rounded-xl shadow-sm border border-gray-100">
-                            <div class="text-gray-500 text-sm font-medium">P2P Network Status</div>
-                            <div class="text-lg font-bold text-green-600 mt-2">Online (Local)</div>
-                        </div>
-                    </div>
-
-                    <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
-                        <!-- Quick Actions -->
-                        <div class="bg-white p-6 rounded-xl shadow-sm border border-gray-100">
-                            <h3 class="text-lg font-medium mb-4">Quick Search & Restore</h3>
-                            <div class="flex gap-2 mb-4">
-                                <input type="text" id="adminAppSearch" placeholder="Enter App Name to restore..." class="flex-1 border rounded px-3 py-2 text-sm">
-                                <button onclick="adminRestoreApp()" class="bg-blue-600 text-white px-4 py-2 rounded text-sm hover:bg-blue-700">Restore</button>
-                            </div>
-                            <div class="flex gap-2">
-                                <input type="text" id="adminUserSearch" placeholder="Enter Username to unban..." class="flex-1 border rounded px-3 py-2 text-sm">
-                                <button onclick="adminUnbanUser()" class="bg-green-600 text-white px-4 py-2 rounded text-sm hover:bg-green-700">Unban</button>
-                            </div>
-                        </div>
-
-                        <!-- Reports Queue -->
-                        <div class="bg-white p-6 rounded-xl shadow-sm border border-gray-100 max-h-96 overflow-y-auto">
-                            <h3 class="text-lg font-medium mb-4 flex justify-between">Reports Queue (Offline Cache) <span class="bg-gray-200 text-gray-700 text-xs px-2 py-1 rounded-full">${reports.length}</span></h3>
-                            <div class="space-y-3">
-                                ${reports.length ? reports.map(r => {
-                                    const targetApp = db.apps.find(a => a.id === r.targetId);
-                                    return `
-                                    <div class="p-3 bg-red-50 border border-red-100 rounded flex justify-between items-center">
-                                        <div>
-                                            <div class="text-sm font-bold text-red-800">Reason: ${r.reason}</div>
-                                            <div class="text-xs text-gray-600">Target: ${targetApp ? targetApp.name : 'Unknown'} (${r.targetId})</div>
-                                        </div>
-                                        <div class="flex gap-2">
-                                            <button onclick="navigate('app/${r.targetId}')" class="text-xs bg-white border px-2 py-1 rounded">View App</button>
-                                            <button onclick="adminAction('dismissReport', '${r.id}')" class="text-xs bg-green-100 text-green-800 px-2 py-1 rounded">Dismiss</button>
-                                        </div>
-                                    </div>
-                                    `;
-                                }).join('') : '<p class="text-sm text-gray-500">No pending reports.</p>'}
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            `;
-        }
-
-        // Admin Action Handlers
-        window.adminAction = function(action, id) {
-            if(!currentUser || currentUser.role !== 'admin') return;
-
-            if(action === 'deleteApp') {
-                const app = db.apps.find(a => a.id === id);
-                if(app) { app.isDeleted = true; showToast('App deleted.', 'success'); }
-            }
-            else if(action === 'banUser') {
-                const user = db.users.find(u => u.id === id);
-                if(user) { user.isBanned = true; showToast('User banned.', 'success'); }
-            }
-            else if(action === 'ipBanUser') {
-                const user = db.users.find(u => u.id === id);
-                if(user) { 
-                    user.isBanned = true; 
-                    user.ipBanned = true;
-                    // Note: We flag the account with ipBanned=true. The login checks if the connecting deviceToken matches any ipBanned account.
-                    showToast('Author permabanned and IP blocked.', 'success'); 
-                }
-            }
-            else if(action === 'verifyApp') {
-                const app = db.apps.find(a => a.id === id);
-                if(app) { app.verified = !app.verified; showToast('Verification toggled.', 'success'); }
-            }
-            else if(action === 'awardMedal') {
-                const app = db.apps.find(a => a.id === id);
-                if(app) { 
-                    if(app.badges.includes('1M_DOWNLOADS')) app.badges = app.badges.filter(b => b !== '1M_DOWNLOADS');
-                    else app.badges.push('1M_DOWNLOADS');
-                    showToast('Medal toggled.', 'success'); 
-                }
-            }
-            else if(action === 'markEducational') {
-                const app = db.apps.find(a => a.id === id);
-                if(app) { app.educational = !app.educational; if(app.educational) app.ageRating = '3+'; showToast('Educational tag toggled.', 'success'); }
-            }
-            else if(action === 'dismissReport') {
-                const r = db.reports.find(rep => rep.id === id);
-                if(r) { r.status = 'dismissed'; showToast('Report dismissed.', 'info'); renderAdminPanel(); }
-            }
-
-            saveDb();
-            // Re-render current view if on app page
-            if(window.location.hash.startsWith('#app/')) renderAppDetails(id);
-        }
-
-        window.adminRestoreApp = function() {
-            const name = document.getElementById('adminAppSearch').value.toLowerCase();
-            const app = db.apps.find(a => a.name.toLowerCase() === name && a.isDeleted);
-            if(app) {
-                app.isDeleted = false;
-                saveDb();
-                showToast(`App ${app.name} restored.`, 'success');
-                renderAdminPanel();
-            } else {
-                showToast('App not found or not deleted.', 'error');
-            }
-        }
-
-        window.adminUnbanUser = function() {
-            const name = document.getElementById('adminUserSearch').value.toLowerCase();
-            const user = db.users.find(u => u.username.toLowerCase() === name);
-            if(user) {
-                user.isBanned = false;
-                user.ipBanned = false;
-                saveDb();
-                showToast(`User ${user.username} unbanned (IP ban lifted).`, 'success');
-                renderAdminPanel();
-            } else {
-                showToast('User not found.', 'error');
-            }
-        }
-
-
-        // --- AUTH & PROFILE UI ---
-
-        window.renderLogin = function() {
-            const content = document.getElementById('mainContent');
-            content.innerHTML = `
-                <div class="flex items-center justify-center min-h-[60vh]">
-                    <div class="bg-white p-8 rounded-2xl shadow-md w-full max-w-md">
-                        <div class="text-center mb-8">
-                            <i class="fa-brands fa-google-play text-play-green text-4xl mb-3"></i>
-                            <h2 class="text-2xl font-semibold">Sign in</h2>
-                            <p class="text-gray-500 mt-1">Use your Superdownloader Account</p>
-                        </div>
-                        <form id="authForm" onsubmit="handleAuthSubmit(event, 'login')">
-                            <div class="space-y-4">
-                                <input type="text" id="authUsername" placeholder="Username" class="w-full border rounded-lg p-3 outline-none focus:border-play-green" required>
-                                <input type="password" id="authPassword" placeholder="Password" class="w-full border rounded-lg p-3 outline-none focus:border-play-green" required>
-                            </div>
-                            <div class="mt-8 flex justify-between items-center">
-                                <button type="button" onclick="renderRegister()" class="text-play-green font-medium hover:underline text-sm">Create account</button>
-                                <button type="submit" class="bg-play-green text-white px-6 py-2 rounded-md font-medium hover:bg-play-hover">Next</button>
-                            </div>
-                        </form>
-                    </div>
-                </div>
-            `;
-        }
-
-        window.renderRegister = function() {
-            const content = document.getElementById('mainContent');
-            content.innerHTML = `
-                <div class="flex items-center justify-center min-h-[60vh]">
-                    <div class="bg-white p-8 rounded-2xl shadow-md w-full max-w-md">
-                        <div class="text-center mb-8">
-                            <h2 class="text-2xl font-semibold">Create account</h2>
-                            <p class="text-gray-500 mt-1">Join the P2P network</p>
-                        </div>
-                        <form id="authForm" onsubmit="handleAuthSubmit(event, 'register')">
-                            <div class="space-y-4">
-                                <input type="text" id="authUsername" placeholder="Choose a unique Username" class="w-full border rounded-lg p-3 outline-none focus:border-play-green" required>
-                                <input type="password" id="authPassword" placeholder="Password" class="w-full border rounded-lg p-3 outline-none focus:border-play-green" required>
-                            </div>
-                            <div class="mt-8 flex justify-between items-center">
-                                <button type="button" onclick="renderLogin()" class="text-play-green font-medium hover:underline text-sm">Sign in instead</button>
-                                <button type="submit" class="bg-play-green text-white px-6 py-2 rounded-md font-medium hover:bg-play-hover">Register</button>
-                            </div>
-                        </form>
-                    </div>
-                </div>
-            `;
-        }
-
-        window.handleAuthSubmit = function(e, type) {
-            e.preventDefault();
-            const u = document.getElementById('authUsername').value.trim();
-            const p = document.getElementById('authPassword').value;
-            if(type === 'login') login(u, p);
-            else register(u, p);
-        }
-
-        function renderProfile() {
-            const content = document.getElementById('mainContent');
-            const userApps = db.apps.filter(a => a.devId === currentUser.id && !a.isDeleted);
-
-            content.innerHTML = `
-                <div class="fade-in max-w-3xl mx-auto">
-                    <h2 class="text-2xl font-semibold mb-6">Account Settings</h2>
+                    // Fetch heavy file from IndexedDB
+                    const fileBlob = await getFileFromDB(appId);
                     
-                    <div class="bg-white p-6 rounded-2xl shadow-sm border border-gray-100 mb-8">
-                        <h3 class="font-medium text-lg mb-4">Edit Profile</h3>
-                        <div class="space-y-4 max-w-md">
-                            <div>
-                                <label class="text-sm text-gray-600 block mb-1">Username</label>
-                                <input type="text" id="profUser" value="${currentUser.username}" class="w-full border rounded p-2 focus:border-play-green outline-none">
-                            </div>
-                            <div>
-                                <label class="text-sm text-gray-600 block mb-1">New Password (leave blank to keep current)</label>
-                                <input type="password" id="profPass" class="w-full border rounded p-2 focus:border-play-green outline-none">
-                            </div>
-                            <button onclick="updateAccount(document.getElementById('profUser').value, document.getElementById('profPass').value)" class="bg-gray-800 text-white px-4 py-2 rounded shadow-sm hover:bg-black">Save Changes</button>
+                    if(fileBlob) {
+                        const url = URL.createObjectURL(fileBlob);
+                        const a = document.createElement('a');
+                        a.href = url;
+                        a.download = app.name.replace(/\s+/g, '_') + '.apk';
+                        document.body.appendChild(a);
+                        a.click();
+                        document.body.removeChild(a);
+                        URL.revokeObjectURL(url); // Free memory immediately
+                    } else {
+                        showToast('Original file not found in local IndexedDB node. Download simulated.', 'error');
+                    }
+
+                    // Update stats
+                    app.downloads += 1;
+                    if(app.downloads >= 1000000 && !app.badges.includes('1M Downloads')) {
+                        app.badges.push('1M Downloads');
+                    }
+                    saveDb();
+                    
+                    setTimeout(() => {
+                        closeModal();
+                        showToast('Download complete!', 'success');
+                        navigate('app', {id: appId});
+                    }, 800);
+                } else {
+                    document.getElementById('dlProgressBar').style.width = progress + '%';
+                    document.getElementById('dlProgressText').textContent = progress + '%';
+                }
+            }, 300);
+        }
+
+        function renderUpload(container) {
+            if(!currentUser) {
+                container.innerHTML = `<div class="text-center py-20 text-gray-500">You must log in to upload apps.</div>`;
+                return;
+            }
+
+            container.innerHTML = `
+                <div class="max-w-2xl mx-auto bg-white p-8 rounded-xl shadow-sm border border-gray-100">
+                    <h2 class="text-2xl font-bold mb-6 text-gray-800">Upload New Application</h2>
+                    
+                    <div id="uploadStep1">
+                        <div class="mb-4">
+                            <label class="block text-sm font-medium text-gray-700 mb-1">App Name</label>
+                            <input type="text" id="upName" class="w-full border p-2 rounded focus:border-play-green outline-none">
                         </div>
+                        <div class="mb-4">
+                            <label class="block text-sm font-medium text-gray-700 mb-1">Short Description (Max 95 chars)</label>
+                            <input type="text" id="upShort" maxlength="95" class="w-full border p-2 rounded focus:border-play-green outline-none">
+                        </div>
+                        <div class="mb-4">
+                            <label class="block text-sm font-medium text-gray-700 mb-1">Full Description</label>
+                            <textarea id="upDesc" rows="4" class="w-full border p-2 rounded focus:border-play-green outline-none"></textarea>
+                        </div>
+                        <div class="mb-4">
+                            <label class="block text-sm font-medium text-gray-700 mb-1">Icon URL (Optional)</label>
+                            <input type="text" id="upIcon" placeholder="https://" class="w-full border p-2 rounded focus:border-play-green outline-none">
+                        </div>
+                        <div class="mb-6 p-4 border-2 border-dashed border-gray-300 rounded bg-gray-50 text-center">
+                            <label class="block text-sm font-bold text-gray-700 mb-2">Upload APK File (Required, Max 500GB supported via IndexedDB chunking)</label>
+                            <input type="file" id="apkUploadInput" accept=".apk" class="hidden" onchange="handleApkSelect(event)">
+                            <button onclick="document.getElementById('apkUploadInput').click()" class="bg-gray-200 text-gray-700 px-4 py-2 rounded hover:bg-gray-300 transition">Choose .apk File</button>
+                            <p id="apkStatus" class="mt-2 text-sm text-play-green font-medium hidden"></p>
+                        </div>
+                        <button onclick="goToUploadStep2()" class="w-full bg-play-green text-white py-3 rounded-lg font-bold hover-bg-play-green">Next: Verification & Age Rating</button>
                     </div>
 
-                    <div class="bg-white p-6 rounded-2xl shadow-sm border border-gray-100 mb-8">
-                        <h3 class="font-medium text-lg mb-4">My Published Apps (${userApps.length})</h3>
-                        ${userApps.length ? `
-                            <div class="space-y-3">
-                                ${userApps.map(a => `
-                                    <div class="flex justify-between items-center p-3 border rounded">
-                                        <div class="flex items-center gap-3">
-                                            <img src="${a.img}" class="w-10 h-10 rounded">
-                                            <div>
-                                                <div class="font-medium text-sm">${a.name}</div>
-                                                <div class="text-xs text-gray-500">${formatNumber(a.downloads)} DLs</div>
-                                            </div>
-                                        </div>
-                                        <button onclick="navigate('app/${a.id}')" class="text-play-green text-sm hover:underline">View</button>
-                                    </div>
-                                `).join('')}
-                            </div>
-                        ` : '<p class="text-sm text-gray-500">You haven\'t published any apps yet.</p>'}
-                    </div>
+                    <div id="uploadStep2" class="hidden">
+                        <h3 class="text-lg font-bold mb-4">Step 2: Verification & Rating</h3>
+                        
+                        <div class="bg-blue-50 p-4 rounded mb-4">
+                            <h4 class="font-bold mb-2 text-blue-800">Two-Step Verification</h4>
+                            <label class="flex items-center gap-2 mb-2 cursor-pointer">
+                                <input type="checkbox" id="verifyRobot" class="w-4 h-4">
+                                <span class="text-sm">I confirm I am not a robot.</span>
+                            </label>
+                            <label class="flex items-start gap-2 cursor-pointer">
+                                <input type="checkbox" id="verifyTerms" class="w-4 h-4 mt-1">
+                                <span class="text-sm">I accept the terms. I understand that uploading viruses or malicious files will result in a permanent ban (IP & Account).</span>
+                            </label>
+                        </div>
 
-                    <div class="bg-red-50 p-6 rounded-2xl border border-red-100">
-                        <h3 class="font-medium text-red-800 text-lg mb-2">Danger Zone</h3>
-                        <p class="text-sm text-red-600 mb-4">Once you delete your account, there is no going back. Please be certain.</p>
-                        <button onclick="confirmDeleteAccount()" class="border border-red-300 text-red-600 bg-white px-4 py-2 rounded shadow-sm hover:bg-red-50 font-medium">Delete Account</button>
+                        <div class="bg-gray-50 p-4 rounded mb-6">
+                            <h4 class="font-bold mb-2">Age Rating Questionnaire</h4>
+                            <label class="flex items-center justify-between mb-2 text-sm">
+                                Is this an Educational App? 
+                                <input type="checkbox" id="qEdu" class="w-4 h-4">
+                            </label>
+                            <label class="flex items-center justify-between mb-2 text-sm">
+                                Does it contain realistic blood/violence? 
+                                <input type="checkbox" id="qViolence" class="w-4 h-4">
+                            </label>
+                            <label class="flex items-center justify-between mb-2 text-sm">
+                                Does it contain strong language or sexual content? 
+                                <input type="checkbox" id="qAdult" class="w-4 h-4">
+                            </label>
+                            <label class="flex items-center justify-between mb-2 text-sm">
+                                Does it allow unmoderated user interaction? 
+                                <input type="checkbox" id="qSocial" class="w-4 h-4">
+                            </label>
+                        </div>
+
+                        <div class="flex gap-4">
+                            <button onclick="backToUploadStep1()" class="px-6 py-3 bg-gray-200 rounded-lg font-bold hover:bg-gray-300">Back</button>
+                            <button onclick="publishApp()" class="flex-1 bg-play-green text-white py-3 rounded-lg font-bold hover-bg-play-green">Publish Application</button>
+                        </div>
                     </div>
                 </div>
             `;
+        }
+
+        window.handleApkSelect = function(event) {
+            const file = event.target.files[0];
+            const status = document.getElementById('apkStatus');
+            if(!file) {
+                status.classList.add('hidden');
+                uploadState.rawFile = null;
+                return;
+            }
+
+            if(!file.name.endsWith('.apk')) {
+                showToast('Error: Only .apk files are allowed!', 'error');
+                event.target.value = '';
+                status.classList.add('hidden');
+                uploadState.rawFile = null;
+                return;
+            }
+
+            uploadState.rawFile = file;
+            status.textContent = `Selected: ${file.name} (${(file.size/1024/1024).toFixed(2)} MB)`;
+            status.classList.remove('hidden');
+        }
+
+        window.goToUploadStep2 = function() {
+            const name = document.getElementById('upName').value.trim();
+            if(!name || !uploadState.rawFile) {
+                return showToast('Name and .apk file are mandatory!', 'error');
+            }
+            
+            uploadState.metadata = {
+                name: name,
+                shortDesc: document.getElementById('upShort').value.trim(),
+                desc: document.getElementById('upDesc').value.trim(),
+                icon: document.getElementById('upIcon').value.trim()
+            };
+
+            document.getElementById('uploadStep1').classList.add('hidden');
+            document.getElementById('uploadStep2').classList.remove('hidden');
+        }
+
+        window.backToUploadStep1 = function() {
+            document.getElementById('uploadStep2').classList.add('hidden');
+            document.getElementById('uploadStep1').classList.remove('hidden');
+        }
+
+        window.publishApp = async function() {
+            if(!document.getElementById('verifyRobot').checked || !document.getElementById('verifyTerms').checked) {
+                return showToast('You must complete the 2-step verification!', 'error');
+            }
+
+            const qEdu = document.getElementById('qEdu').checked;
+            const qViol = document.getElementById('qViolence').checked;
+            const qAdult = document.getElementById('qAdult').checked;
+            const qSocial = document.getElementById('qSocial').checked;
+
+            let age = '3+';
+            if(qEdu) age = '3+ (Educational)';
+            if(qSocial) age = '13+';
+            if(qViol) age = '16+';
+            if(qAdult) age = '18+';
+
+            showModal(`
+                <div class="p-6 text-center">
+                    <h3 class="text-lg font-bold text-gray-900 mb-2">Publishing to Network...</h3>
+                    <p class="text-sm text-gray-500 mb-4">Disassembling APK and saving securely in local IndexedDB node...</p>
+                    <div class="w-full bg-gray-200 rounded-full h-4 mb-2 overflow-hidden shadow-inner">
+                        <div class="bg-play-green h-4 rounded-full transition-all duration-200" id="upProgressBar" style="width: 0%"></div>
+                    </div>
+                    <p class="text-sm font-bold text-gray-700" id="upProgressText">0%</p>
+                </div>
+            `);
+
+            let progress = 0;
+            const interval = setInterval(async () => {
+                progress += Math.floor(Math.random() * 15) + 5;
+                if(progress >= 100) {
+                    progress = 100;
+                    clearInterval(interval);
+                    document.getElementById('upProgressBar').style.width = '100%';
+                    document.getElementById('upProgressText').textContent = '100%';
+
+                    const newAppId = generateId();
+
+                    // Save massive file payload to IndexedDB
+                    if(uploadState.rawFile) {
+                        await saveFileToDB(newAppId, uploadState.rawFile);
+                    }
+
+                    // Save lightweight metadata to LocalStorage
+                    const newApp = {
+                        id: newAppId,
+                        name: uploadState.metadata.name,
+                        shortDesc: uploadState.metadata.shortDesc,
+                        desc: uploadState.metadata.desc,
+                        devId: currentUser.id,
+                        version: '1.0.0',
+                        size: (uploadState.rawFile.size/1024/1024).toFixed(2) + ' MB',
+                        img: uploadState.metadata.icon || 'https://placehold.co/150x150/e2e8f0/64748b?text=APK',
+                        downloads: 0,
+                        rating: '0.0',
+                        verified: false,
+                        educational: qEdu,
+                        badges: [],
+                        ageRating: age,
+                        isDeleted: false,
+                        timestamp: Date.now()
+                    };
+
+                    db.apps.push(newApp);
+                    saveDb();
+
+                    // Clean state
+                    uploadState = { metadata: {}, fileData: null, rawFile: null };
+
+                    setTimeout(() => {
+                        closeModal();
+                        showToast('App published successfully!', 'success');
+                        navigate('app', {id: newAppId});
+                    }, 600);
+                } else {
+                    document.getElementById('upProgressBar').style.width = progress + '%';
+                    document.getElementById('upProgressText').textContent = progress + '%';
+                }
+            }, 250);
+        }
+
+        function renderSettings(container) {
+            if(!currentUser) return navigate('home');
+            container.innerHTML = `
+                <div class="max-w-xl mx-auto bg-white p-8 rounded-xl shadow-sm border border-gray-100">
+                    <h2 class="text-2xl font-bold mb-6">Settings</h2>
+                    
+                    <div class="mb-6">
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Username</label>
+                        <div class="flex gap-2">
+                            <input type="text" id="setUserName" value="${currentUser.username}" class="flex-1 border p-2 rounded focus:border-play-green outline-none" disabled>
+                        </div>
+                        <p class="text-xs text-gray-500 mt-1">Username changes not allowed in current version to preserve P2P links.</p>
+                    </div>
+
+                    <div class="mb-8">
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Change Password</label>
+                        <input type="password" id="setPass" placeholder="New Password" class="w-full border p-2 rounded mb-2 focus:border-play-green outline-none">
+                        <button onclick="changePassword()" class="bg-gray-800 text-white px-4 py-2 rounded hover:bg-gray-900 text-sm">Update Password</button>
+                    </div>
+
+                    <hr class="my-6">
+
+                    <div class="flex flex-col gap-3">
+                        <button onclick="logout()" class="w-full border border-gray-300 text-gray-700 py-2 rounded font-medium hover:bg-gray-50">Log out</button>
+                        <button onclick="confirmDeleteAccount()" class="w-full bg-red-50 text-red-600 border border-red-200 py-2 rounded font-medium hover:bg-red-100">Delete Account Permanently</button>
+                    </div>
+                </div>
+            `;
+        }
+
+        window.changePassword = function() {
+            const p = document.getElementById('setPass').value;
+            if(!p) return;
+            const u = db.users.find(x => x.id === currentUser.id);
+            if(u) {
+                u.password = p;
+                saveDb();
+                document.getElementById('setPass').value = '';
+                showToast('Password updated!', 'success');
+            }
         }
 
         window.confirmDeleteAccount = function() {
             showModal(`
                 <div class="p-6 text-center">
                     <div class="w-16 h-16 bg-red-100 text-red-500 rounded-full flex items-center justify-center text-3xl mx-auto mb-4"><i class="fas fa-exclamation-triangle"></i></div>
-                    <h3 class="text-lg font-bold mb-2">Are you absolutely sure?</h3>
-                    <p class="text-sm text-gray-600 mb-6">This action cannot be undone. This will permanently delete your account and remove your uploaded apps from the network.</p>
+                    <h3 class="text-lg font-bold mb-2">Delete Account?</h3>
+                    <p class="text-sm text-gray-600 mb-6">This will permanently delete your account and remove all your apps from the network.</p>
                     <div class="flex justify-center gap-4">
                         <button onclick="closeModal()" class="px-6 py-2 border rounded font-medium text-gray-600 hover:bg-gray-50">Cancel</button>
-                        <button onclick="closeModal(); deleteAccount();" class="px-6 py-2 bg-red-600 text-white rounded font-medium hover:bg-red-700">Yes, Delete My Account</button>
+                        <button onclick="deleteAccountFinal()" class="px-6 py-2 bg-red-600 text-white rounded font-medium hover:bg-red-700">Delete</button>
                     </div>
                 </div>
             `);
         }
 
-        // Initialize App
-        window.onload = function() {
-            initDb();
-            handleRoute();
-        };
+        window.deleteAccountFinal = function() {
+            db.apps.forEach(a => {
+                if(a.devId === currentUser.id) a.isDeleted = true;
+            });
+            const idx = db.users.findIndex(x => x.id === currentUser.id);
+            if(idx > -1) db.users.splice(idx, 1);
+            saveDb();
+            closeModal();
+            logout(false);
+            showToast('Account deleted.', 'info');
+        }
 
+        function renderAdmin(container) {
+            if(!currentUser || currentUser.role !== 'admin') return navigate('home');
+            
+            const usersHtml = db.users.map(u => `
+                <tr class="border-t text-sm">
+                    <td class="py-2">${u.username} ${u.role === 'admin' ? '<i class="fas fa-star text-yellow-500"></i>' : ''}</td>
+                    <td class="py-2">
+                        ${u.isBanned ? '<span class="text-red-500 font-bold">Banned</span>' : '<span class="text-green-500">Active</span>'}
+                        ${u.ipBanned ? '<span class="text-red-800 font-bold ml-2">(IP BANNED)</span>' : ''}
+                    </td>
+                    <td class="py-2 text-right">
+                        ${!u.isBanned ? `<button onclick="adminBanUser('${u.id}')" class="text-red-600 hover:underline mr-2">Ban</button>` : `<button onclick="adminUnbanUser('${u.id}')" class="text-green-600 hover:underline mr-2">Unban</button>`}
+                        ${!u.ipBanned ? `<button onclick="adminIPBanUser('${u.id}')" class="text-red-800 font-bold hover:underline">IP Ban</button>` : `<button onclick="adminUnbanIPUser('${u.id}')" class="text-green-800 hover:underline">Unban IP</button>`}
+                    </td>
+                </tr>
+            `).join('');
+
+            container.innerHTML = `
+                <div class="max-w-5xl mx-auto">
+                    <h2 class="text-3xl font-bold mb-6 text-gray-900"><i class="fas fa-shield-alt text-play-green"></i> System Admin Panel</h2>
+                    <div class="bg-white rounded-xl shadow-sm border border-gray-100 p-6 mb-6">
+                        <h3 class="text-xl font-bold mb-4">User Management</h3>
+                        <table class="w-full text-left">
+                            <thead>
+                                <tr class="text-gray-500 text-sm">
+                                    <th class="pb-2">Username</th>
+                                    <th class="pb-2">Status</th>
+                                    <th class="pb-2 text-right">Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody>${usersHtml}</tbody>
+                        </table>
+                    </div>
+                </div>
+            `;
+        }
+
+        // Admin Actions
+        window.adminDeleteApp = function(appId) {
+            const app = db.apps.find(a => a.id === appId);
+            if(app) { app.isDeleted = true; saveDb(); showToast('App deleted.', 'info'); navigate('home'); }
+        }
+        window.adminToggleVerify = function(appId) {
+            const app = db.apps.find(a => a.id === appId);
+            if(app) { app.verified = !app.verified; saveDb(); showToast('Verification toggled.', 'success'); renderAppDetails(document.getElementById('app'), appId); }
+        }
+        window.adminToggleEdu = function(appId) {
+            const app = db.apps.find(a => a.id === appId);
+            if(app) { app.educational = !app.educational; saveDb(); showToast('Edu badge toggled.', 'success'); renderAppDetails(document.getElementById('app'), appId); }
+        }
+        window.adminBanUser = function(userId) {
+            const u = db.users.find(x => x.id === userId);
+            if(u) { u.isBanned = true; saveDb(); showToast(`${u.username} banned.`, 'success'); navigate('admin'); }
+        }
+        window.adminUnbanUser = function(userId) {
+            const u = db.users.find(x => x.id === userId);
+            if(u) { u.isBanned = false; saveDb(); showToast(`${u.username} unbanned.`, 'success'); navigate('admin'); }
+        }
+        window.adminIPBanUser = function(userId) {
+            const u = db.users.find(x => x.id === userId);
+            if(u) { u.isBanned = true; u.ipBanned = true; saveDb(); showToast(`${u.username} IP Banned!`, 'success'); navigate('admin'); }
+        }
+        window.adminUnbanIPUser = function(userId) {
+            const u = db.users.find(x => x.id === userId);
+            if(u) { u.ipBanned = false; saveDb(); showToast(`${u.username} IP unbanned.`, 'success'); navigate('admin'); }
+        }
+
+        // Boot up
+        window.onload = async function() {
+            await initFileDB(); // Start IndexedDB for heavy APKs
+            initDb();           // Load lightweight localstorage metadata
+            navigate('home');
+        };
     </script>
 </body>
 </html>
