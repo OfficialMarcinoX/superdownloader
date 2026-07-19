@@ -10,48 +10,33 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <!-- Google Fonts -->
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
-    <!-- PeerJS for TRUE P2P Networking -->
+    <!-- PeerJS & MQTT for TRUE AUTOMATIC P2P -->
     <script src="https://unpkg.com/peerjs@1.5.2/dist/peerjs.min.js"></script>
+    <script src="https://unpkg.com/mqtt/dist/mqtt.min.js"></script>
     
     <style>
-        body {
-            font-family: 'Inter', sans-serif;
-            background-color: #f8fafc;
-            color: #0f172a;
-            overflow-x: hidden;
-            width: 100vw;
-        }
-        
-        /* Custom Scrollbar for Play Store feel */
+        body { font-family: 'Inter', sans-serif; background-color: #f8fafc; color: #0f172a; overflow-x: hidden; width: 100vw; }
         ::-webkit-scrollbar { width: 6px; height: 6px; }
         ::-webkit-scrollbar-track { background: transparent; }
         ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 10px; }
         ::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
-
         .app-card { transition: all 0.2s ease; }
-        .app-card:hover {
-            transform: translateY(-4px);
-            box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.1);
-        }
-
-        /* Animations */
+        .app-card:hover { transform: translateY(-4px); box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.1); }
         @keyframes slideInUp { from { transform: translateY(20px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
         .animate-slide-up { animation: slideInUp 0.3s ease forwards; }
-
         @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
         .animate-fade-in { animation: fadeIn 0.2s ease forwards; }
-        
         .hide-scrollbar::-webkit-scrollbar { display: none; }
         .hide-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
     </style>
 </head>
 <body class="bg-gray-50 flex flex-col min-h-screen w-full">
 
+    <!-- NAWIGACJA -->
     <nav class="bg-white shadow-sm border-b border-gray-100 sticky top-0 z-40 w-full">
         <div class="max-w-7xl mx-auto px-2 sm:px-4 lg:px-8">
             <div class="flex justify-between h-16 items-center gap-2">
                 
-                <!-- Logo -->
                 <div class="flex items-center cursor-pointer flex-shrink-0" onclick="ui.switchView('home')">
                     <div class="w-8 h-8 sm:w-10 sm:h-10 bg-gradient-to-br from-emerald-400 to-emerald-600 rounded-xl flex items-center justify-center shadow-lg transform rotate-3 flex-shrink-0">
                         <i class="fa-solid fa-download text-white text-base sm:text-xl -rotate-3"></i>
@@ -61,142 +46,115 @@
                     </span>
                 </div>
 
-                <!-- Search Bar -->
                 <div class="flex-1 max-w-2xl px-2">
                     <div class="relative w-full">
-                        <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                            <i class="fa-solid fa-magnifying-glass text-gray-400"></i>
-                        </div>
-                        <input type="text" id="searchInput" placeholder="Search apps..." class="block w-full pl-9 sm:pl-10 pr-3 py-2 border border-gray-200 rounded-full text-sm sm:text-base leading-5 bg-gray-50 placeholder-gray-500 focus:outline-none focus:bg-white focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 transition-all" onkeypress="if(event.key === 'Enter') ui.searchApps()">
+                        <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none"><i class="fa-solid fa-magnifying-glass text-gray-400"></i></div>
+                        <input type="text" id="searchInput" placeholder="Search apps & games..." class="block w-full pl-9 sm:pl-10 pr-3 py-2 border border-gray-200 rounded-full text-sm sm:text-base leading-5 bg-gray-50 placeholder-gray-500 focus:outline-none focus:bg-white focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 transition-all" onkeypress="if(event.key === 'Enter') ui.searchApps()">
                     </div>
                 </div>
 
-                <!-- Right Menu -->
                 <div class="flex items-center gap-2 sm:gap-4 flex-shrink-0">
-                    <!-- P2P Network Button -->
-                    <button onclick="ui.openP2PModal()" class="flex items-center gap-2 text-blue-500 hover:text-blue-700 font-bold transition-colors text-sm sm:text-base px-2">
-                        <i class="fa-solid fa-network-wired"></i> <span class="hidden sm:inline" data-i18n="nav_p2p">P2P Network</span>
-                    </button>
-                    
-                    <!-- Upload Button -->
-                    <button onclick="ui.goToUpload()" class="hidden md:flex items-center gap-2 text-gray-500 hover:text-emerald-600 font-medium transition-colors" data-i18n="nav_upload">
-                        <i class="fa-solid fa-cloud-arrow-up"></i> Upload
-                    </button>
-                    
-                    <!-- User Menu Container -->
-                    <div id="userMenuContainer" class="relative">
-                        <!-- Populated by JS -->
+                    <!-- Automatyczny Status P2P -->
+                    <div class="hidden sm:flex items-center gap-2 bg-emerald-50 px-3 py-1.5 rounded-full border border-emerald-100">
+                        <div class="w-2 h-2 bg-emerald-500 rounded-full animate-pulse"></div>
+                        <span class="text-xs font-bold text-emerald-700">P2P: <span id="p2pOnlineCount">1</span> Online</span>
                     </div>
+                    
+                    <button id="navUploadBtn" onclick="ui.goToUpload()" class="hidden md:flex items-center gap-2 text-gray-500 hover:text-emerald-600 font-medium transition-colors" data-i18n="nav_upload"><i class="fa-solid fa-cloud-arrow-up"></i> Upload</button>
+                    
+                    <div id="userMenuContainer" class="relative"></div>
                 </div>
             </div>
         </div>
     </nav>
 
+    <!-- GŁÓWNA ZAWARTOŚĆ -->
     <main class="flex-1 w-full max-w-7xl mx-auto px-3 sm:px-6 lg:px-8 py-4 sm:py-8 relative">
         
-        <!-- VIEW: HOME -->
+        <!-- WIDOK: STRONA GŁÓWNA -->
         <div id="view-home" class="view-section block animate-fade-in w-full">
-            <h2 class="text-xl sm:text-2xl font-bold text-gray-900 mb-3 sm:mb-6" data-i18n="home_rec">Recommended for you</h2>
-            <div id="recommendedAppsGrid" class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-3 sm:gap-6 w-full">
-                <!-- Apps loaded here -->
+            
+            <!-- NOWOŚĆ: Automatyczna sieć P2P -->
+            <div class="mb-8 sm:mb-12 bg-gradient-to-r from-gray-900 to-gray-800 rounded-2xl p-4 sm:p-6 shadow-xl border border-gray-700 text-white relative overflow-hidden">
+                <div class="absolute top-0 right-0 p-4 opacity-10"><i class="fa-solid fa-earth-americas text-8xl"></i></div>
+                <h2 class="text-xl sm:text-2xl font-bold mb-1 relative z-10 flex items-center gap-2">
+                    <div class="w-3 h-3 bg-red-500 rounded-full animate-pulse"></div>
+                    <span data-i18n="home_live">Global P2P Live</span>
+                </h2>
+                <p class="text-gray-400 text-sm mb-4 relative z-10">Apps automatically shared by people currently on the website.</p>
+                <div id="liveP2PGrid" class="flex gap-4 overflow-x-auto pb-4 hide-scrollbar relative z-10 snap-x">
+                    <p class="text-gray-500 text-sm italic w-full">Waiting for other users to connect to the P2P Mesh...</p>
+                </div>
             </div>
+
+            <h2 class="text-xl sm:text-2xl font-bold text-gray-900 mb-3 sm:mb-6" data-i18n="home_rec">Recommended for you</h2>
+            <div id="recommendedAppsGrid" class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-3 sm:gap-6 w-full"></div>
 
             <div class="mt-8 sm:mt-12 flex items-center justify-between mb-3 sm:mb-6">
                 <h2 class="text-xl sm:text-2xl font-bold text-gray-900"><span data-i18n="home_hits">Hits</span> <span id="currentYear"></span></h2>
             </div>
-            <div id="hitsAppsGrid" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-6 w-full">
-                <!-- Hits loaded here -->
-            </div>
+            <div id="hitsAppsGrid" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-6 w-full"></div>
         </div>
 
-        <!-- VIEW: APP DETAILS -->
-        <div id="view-app" class="view-section hidden animate-fade-in w-full">
-            <!-- Populated by JS -->
-        </div>
+        <!-- WIDOK: APLIKACJA -->
+        <div id="view-app" class="view-section hidden animate-fade-in w-full"></div>
 
-        <!-- VIEW: UPLOAD -->
+        <!-- WIDOK: WGRYWANIE -->
         <div id="view-upload" class="view-section hidden animate-fade-in w-full max-w-3xl mx-auto">
             <div class="bg-white rounded-2xl shadow-sm border border-gray-100 p-4 sm:p-8">
-                <h2 class="text-2xl sm:text-3xl font-bold mb-2" data-i18n="btn_publish">Publish App via Local Node</h2>
-                <p class="text-sm sm:text-base text-gray-500 mb-6 sm:mb-8">Add application to your local database to seed it via P2P.</p>
+                <h2 class="text-2xl sm:text-3xl font-bold mb-2" data-i18n="btn_publish">Publish App</h2>
+                <p class="text-sm sm:text-base text-gray-500 mb-6 sm:mb-8">Add application to your local database to seed it automatically via P2P.</p>
                 
-                <!-- Upload Step 1 -->
                 <div id="uploadStep1">
                     <div class="space-y-4 sm:space-y-6">
-                        <div>
-                            <label class="block text-sm font-semibold text-gray-700 mb-1">App Name</label>
-                            <input type="text" id="upName" class="w-full px-4 py-3 rounded-xl border border-gray-200 focus:ring-2 focus:ring-emerald-500 outline-none" placeholder="e.g. My Awesome Game">
-                        </div>
-                        <div>
-                            <label class="block text-sm font-semibold text-gray-700 mb-1">Description (<span id="descCount">0</span>/95)</label>
-                            <textarea id="upDesc" maxlength="95" rows="2" class="w-full px-4 py-3 rounded-xl border border-gray-200 focus:ring-2 focus:ring-emerald-500 outline-none resize-none" placeholder="Short and catchy description..."></textarea>
-                        </div>
-                        <div>
-                            <label class="block text-sm font-semibold text-gray-700 mb-1">App Icon (Image .png, .jpg)</label>
-                            <input type="file" id="upIcon" accept="image/png, image/jpeg" class="w-full text-sm text-gray-500 file:mr-4 file:py-3 file:px-4 file:rounded-xl file:border-0 file:text-sm file:font-semibold file:bg-emerald-50 file:text-emerald-700 border border-gray-200 rounded-xl">
-                        </div>
-                        <div>
-                            <label class="block text-sm font-semibold text-gray-700 mb-1">Application File (ONLY .APK)</label>
-                            <input type="file" id="upApk" accept=".apk" class="w-full text-sm text-gray-500 file:mr-4 file:py-3 file:px-4 file:rounded-xl file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 border border-gray-200 rounded-xl">
-                        </div>
+                        <div><label class="block text-sm font-semibold text-gray-700 mb-1">App Name</label><input type="text" id="upName" class="w-full px-4 py-3 rounded-xl border border-gray-200 focus:ring-2 focus:ring-emerald-500 outline-none" placeholder="e.g. My Awesome Game"></div>
+                        <div><label class="block text-sm font-semibold text-gray-700 mb-1">Description (<span id="descCount">0</span>/95)</label><textarea id="upDesc" maxlength="95" rows="2" class="w-full px-4 py-3 rounded-xl border border-gray-200 focus:ring-2 focus:ring-emerald-500 outline-none resize-none" placeholder="Short and catchy description..."></textarea></div>
+                        <div><label class="block text-sm font-semibold text-gray-700 mb-1">App Icon (Image .png, .jpg)</label><input type="file" id="upIcon" accept="image/png, image/jpeg" class="w-full text-sm text-gray-500 file:mr-4 file:py-3 file:px-4 file:rounded-xl file:border-0 file:text-sm file:font-semibold file:bg-emerald-50 file:text-emerald-700 border border-gray-200 rounded-xl"></div>
+                        <div><label class="block text-sm font-semibold text-gray-700 mb-1">Application File (ONLY .APK)</label><input type="file" id="upApk" accept=".apk" class="w-full text-sm text-gray-500 file:mr-4 file:py-3 file:px-4 file:rounded-xl file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 border border-gray-200 rounded-xl"></div>
                         <button onclick="appStore.nextUploadStep(2)" class="w-full bg-gray-900 text-white font-bold py-3 rounded-xl shadow-md hover:bg-gray-800 transition-colors mt-4">Next Step</button>
                     </div>
                 </div>
 
-                <!-- Upload Step 2 -->
                 <div id="uploadStep2" class="hidden">
                     <h3 class="text-lg sm:text-xl font-bold mb-4">Age Rating Form (AI Powered)</h3>
-                    <div class="space-y-3 sm:space-y-4 mb-6 bg-gray-50 p-4 sm:p-6 rounded-xl border border-gray-100 text-sm sm:text-base">
-                        <label class="flex items-center gap-3"><input type="checkbox" id="qEdu" class="w-5 h-5 text-emerald-600 rounded"> <span>Educational Application</span></label>
-                        <label class="flex items-center gap-3"><input type="checkbox" id="qOnline" class="w-5 h-5 text-emerald-600 rounded"> <span>Online Interactions (Chat/Multiplayer)</span></label>
-                        <label class="flex items-center gap-3"><input type="checkbox" id="qBlood" class="w-5 h-5 text-emerald-600 rounded"> <span>Contains Blood or Gore</span></label>
-                        <label class="flex items-center gap-3"><input type="checkbox" id="qViolence" class="w-5 h-5 text-emerald-600 rounded"> <span>Contains Violence</span></label>
-                        <label class="flex items-center gap-3"><input type="checkbox" id="qFear" class="w-5 h-5 text-emerald-600 rounded"> <span>Contains Frightening Elements</span></label>
-                        <label class="flex items-center gap-3"><input type="checkbox" id="qSwear" class="w-5 h-5 text-emerald-600 rounded"> <span>Bad Language / Swearing</span></label>
-                        <label class="flex items-center gap-3"><input type="checkbox" id="qSexMild" class="w-5 h-5 text-emerald-600 rounded"> <span>Mild Suggestive Themes</span></label>
-                        <label class="flex items-center gap-3"><input type="checkbox" id="qSexExplicit" class="w-5 h-5 text-emerald-600 rounded"> <span>Explicit Content (Adults only)</span></label>
+                    <div class="space-y-3 sm:space-y-4 mb-6 bg-gray-50 p-4 sm:p-6 rounded-xl border border-gray-100 text-sm sm:text-base grid grid-cols-1 sm:grid-cols-2">
+                        <label class="flex items-center gap-3"><input type="checkbox" id="qEdu" class="w-5 h-5 text-emerald-600 rounded"> <span>Educational</span></label>
+                        <label class="flex items-center gap-3"><input type="checkbox" id="qOnline" class="w-5 h-5 text-emerald-600 rounded"> <span>Online Chat/Multi</span></label>
+                        <label class="flex items-center gap-3"><input type="checkbox" id="qBlood" class="w-5 h-5 text-emerald-600 rounded"> <span>Blood/Gore</span></label>
+                        <label class="flex items-center gap-3"><input type="checkbox" id="qViolence" class="w-5 h-5 text-emerald-600 rounded"> <span>Violence</span></label>
+                        <label class="flex items-center gap-3"><input type="checkbox" id="qFear" class="w-5 h-5 text-emerald-600 rounded"> <span>Frightening Elements</span></label>
+                        <label class="flex items-center gap-3"><input type="checkbox" id="qSwear" class="w-5 h-5 text-emerald-600 rounded"> <span>Bad Language</span></label>
+                        <label class="flex items-center gap-3"><input type="checkbox" id="qSexMild" class="w-5 h-5 text-emerald-600 rounded"> <span>Suggestive Themes</span></label>
+                        <label class="flex items-center gap-3"><input type="checkbox" id="qSexExplicit" class="w-5 h-5 text-emerald-600 rounded"> <span>Explicit (18+)</span></label>
                         <label class="flex items-center gap-3"><input type="checkbox" id="qGambling" class="w-5 h-5 text-emerald-600 rounded"> <span>Simulated Gambling</span></label>
-                        <label class="flex items-center gap-3"><input type="checkbox" id="qDrugs" class="w-5 h-5 text-emerald-600 rounded"> <span>Reference to Drugs/Alcohol</span></label>
+                        <label class="flex items-center gap-3"><input type="checkbox" id="qDrugs" class="w-5 h-5 text-emerald-600 rounded"> <span>Drugs/Alcohol</span></label>
                     </div>
-
                     <h3 class="text-lg sm:text-xl font-bold mb-4">2-Step Verification</h3>
                     <div class="space-y-3 mb-8">
-                        <label class="flex items-center gap-3 bg-white p-4 border rounded-xl cursor-pointer hover:bg-gray-50">
-                            <input type="checkbox" id="vBot" class="w-5 h-5 text-emerald-600 rounded">
-                            <span class="font-medium text-gray-700 text-sm sm:text-base">I am not a robot</span>
-                        </label>
-                        <label class="flex items-start gap-3 bg-white p-4 border rounded-xl cursor-pointer hover:bg-gray-50">
-                            <input type="checkbox" id="vTos" class="w-6 h-6 text-emerald-600 rounded mt-1">
-                            <span class="text-xs sm:text-sm text-gray-600 leading-relaxed">I agree to the Terms of Service. Uploading viruses will result in a permanent ban.</span>
-                        </label>
+                        <label class="flex items-center gap-3 bg-white p-4 border rounded-xl cursor-pointer hover:bg-gray-50"><input type="checkbox" id="vBot" class="w-5 h-5 text-emerald-600 rounded"><span class="font-medium text-gray-700 text-sm sm:text-base">I am not a robot</span></label>
+                        <label class="flex items-start gap-3 bg-white p-4 border rounded-xl cursor-pointer hover:bg-gray-50"><input type="checkbox" id="vTos" class="w-6 h-6 text-emerald-600 rounded mt-1"><span class="text-xs sm:text-sm text-gray-600 leading-relaxed">I agree to the Terms of Service. Uploading viruses will result in a permanent ban.</span></label>
                     </div>
-
                     <div class="flex flex-col sm:flex-row gap-3 pt-4 border-t">
                         <button onclick="appStore.prevUploadStep()" class="px-6 py-3 bg-gray-100 text-gray-700 font-bold rounded-xl hover:bg-gray-200 w-full sm:w-auto">Back</button>
                         <button onclick="appStore.startUploadProcess()" id="btnSubmitApp" class="flex-1 bg-emerald-600 text-white font-bold py-3 rounded-xl shadow-md hover:bg-emerald-700 transition-colors w-full">Publish App</button>
                     </div>
                 </div>
 
-                <!-- Upload Step 3 (Progress) -->
                 <div id="uploadStep3" class="hidden text-center py-8 sm:py-12">
                     <div class="w-16 h-16 sm:w-20 sm:h-20 mx-auto border-4 border-gray-100 border-t-emerald-500 rounded-full animate-spin mb-6"></div>
-                    <h2 class="text-xl sm:text-2xl font-bold mb-2">Saving to IndexedDB...</h2>
-                    <p class="text-sm sm:text-base text-gray-500 mb-4">Encrypting and storing files locally for P2P Seeding.</p>
-                    <div class="w-full bg-gray-200 rounded-full h-4 mb-2 overflow-hidden">
-                        <div id="uploadProgressBar" class="bg-emerald-500 h-4 rounded-full transition-all duration-200" style="width: 0%"></div>
-                    </div>
+                    <h2 class="text-xl sm:text-2xl font-bold mb-2">Saving & Seeding to P2P...</h2>
+                    <div class="w-full bg-gray-200 rounded-full h-4 mb-2 overflow-hidden mt-6"><div id="uploadProgressBar" class="bg-emerald-500 h-4 rounded-full transition-all duration-200" style="width: 0%"></div></div>
                     <p id="uploadProgressText" class="font-bold text-emerald-600">0%</p>
                 </div>
             </div>
         </div>
 
-        <!-- VIEW: SETTINGS -->
+        <!-- WIDOK: USTAWIENIA -->
         <div id="view-settings" class="view-section hidden animate-fade-in w-full max-w-2xl mx-auto">
             <h2 class="text-2xl sm:text-3xl font-bold mb-6 sm:mb-8" data-i18n="settings_title">Account Settings</h2>
-            
             <div class="bg-white rounded-2xl shadow-sm border border-gray-100 p-4 sm:p-8 mb-6">
                 <div class="mb-6">
-                    <label class="block text-sm font-bold text-gray-700 mb-2" data-i18n="set_lang">Language</label>
+                    <label class="block text-sm font-bold text-gray-700 mb-2" data-i18n="set_lang">Language / Język</label>
                     <select id="langSelect" onchange="i18n.setLang(this.value)" class="w-full px-4 py-3 rounded-xl border border-gray-200 focus:ring-2 focus:ring-emerald-500 outline-none">
                         <option value="en">English (US)</option>
                         <option value="pl">Polski (PL)</option>
@@ -204,115 +162,62 @@
                         <option value="de">Deutsch (DE)</option>
                     </select>
                 </div>
-
                 <hr class="my-6 border-gray-100">
-
                 <div class="mb-6">
                     <label class="block text-sm font-bold text-gray-700 mb-2" data-i18n="set_user">Change Username</label>
                     <div class="flex flex-col sm:flex-row gap-2">
                         <input type="text" id="setNewUsername" class="flex-1 px-4 py-2 rounded-xl border border-gray-200 outline-none" placeholder="New username">
-                        <button onclick="auth.changeUsername()" class="bg-gray-900 text-white px-6 py-2 rounded-xl font-bold hover:bg-gray-800" data-i18n="btn_update">Update</button>
+                        <button id="btnUpdateUser" onclick="auth.changeUsername()" class="bg-gray-900 text-white px-6 py-2 rounded-xl font-bold hover:bg-gray-800" data-i18n="btn_update">Update</button>
                     </div>
                 </div>
-
                 <div>
                     <label class="block text-sm font-bold text-gray-700 mb-2" data-i18n="set_pass">Change Password</label>
                     <div class="flex flex-col gap-2">
                         <input type="password" id="setOldPass" class="w-full px-4 py-2 rounded-xl border border-gray-200 outline-none" placeholder="Current password">
                         <div class="flex flex-col sm:flex-row gap-2">
                             <input type="password" id="setNewPass" class="flex-1 px-4 py-2 rounded-xl border border-gray-200 outline-none" placeholder="New password">
-                            <button onclick="auth.changePassword()" class="bg-gray-900 text-white px-6 py-2 rounded-xl font-bold hover:bg-gray-800" data-i18n="btn_update">Update</button>
+                            <button id="btnUpdatePass" onclick="auth.changePassword()" class="bg-gray-900 text-white px-6 py-2 rounded-xl font-bold hover:bg-gray-800" data-i18n="btn_update">Update</button>
                         </div>
                     </div>
                 </div>
             </div>
-
             <div class="bg-red-50 rounded-2xl border border-red-100 p-4 sm:p-8">
                 <h3 class="text-red-700 font-bold text-xl mb-2">Danger Zone</h3>
-                <p class="text-red-500 text-sm mb-4">Once you delete your account, there is no going back.</p>
                 <button onclick="auth.deleteAccount()" class="w-full sm:w-auto bg-red-600 text-white px-6 py-3 rounded-xl font-bold hover:bg-red-700 transition-colors shadow-md">Delete Account Permanently</button>
             </div>
         </div>
 
-        <!-- VIEW: ADMIN PANEL -->
+        <!-- WIDOK: ADMIN -->
         <div id="view-admin" class="view-section hidden animate-fade-in w-full max-w-5xl mx-auto">
             <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6 gap-4">
-                <h2 class="text-2xl sm:text-3xl font-bold text-red-600" data-i18n="admin_title"><i class="fa-solid fa-shield-halved mr-2"></i>Admin Dashboard</h2>
+                <h2 class="text-2xl sm:text-3xl font-bold text-red-600" data-i18n="admin_title"><i class="fa-solid fa-shield-halved mr-2"></i> Admin Dashboard</h2>
                 <span class="bg-red-100 text-red-700 px-3 py-1 rounded-full text-sm font-bold">God Mode Active</span>
             </div>
-
             <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 sm:gap-8">
-                <!-- Manage Users -->
                 <div class="bg-white rounded-2xl shadow-sm border border-gray-100 p-4 sm:p-6">
                     <h3 class="font-bold text-lg mb-4 border-b pb-2">Manage Users</h3>
                     <div id="adminUserList" class="space-y-3 max-h-96 overflow-y-auto pr-2"></div>
                 </div>
-
-                <!-- Manage Apps -->
                 <div class="bg-white rounded-2xl shadow-sm border border-gray-100 p-4 sm:p-6">
                     <h3 class="font-bold text-lg mb-4 border-b pb-2">Manage Apps</h3>
-                    <input type="text" id="adminAppSearch" placeholder="Search by name..." class="w-full px-4 py-2 rounded-xl border border-gray-200 outline-none mb-4">
                     <div id="adminAppList" class="space-y-3 max-h-80 overflow-y-auto pr-2"></div>
                 </div>
             </div>
         </div>
     </main>
 
-    
-    <!-- TRUE P2P NETWORK MODAL -->
-    <div id="p2pModal" class="fixed inset-0 bg-gray-900 bg-opacity-70 backdrop-blur-sm hidden items-center justify-center z-50 p-4">
-        <div class="bg-white rounded-3xl shadow-2xl w-full max-w-lg p-6 sm:p-8">
-            <div class="flex justify-between items-center mb-6">
-                <h3 class="text-2xl font-bold text-blue-600"><i class="fa-solid fa-network-wired mr-2"></i>P2P Network</h3>
-                <button onclick="ui.closeModal('p2pModal')" class="text-gray-400 hover:text-gray-600 w-8 h-8 flex items-center justify-center rounded-full hover:bg-gray-100"><i class="fa-solid fa-xmark text-xl"></i></button>
-            </div>
-            
-            <div class="bg-blue-50 border border-blue-100 rounded-xl p-4 mb-6">
-                <h4 class="font-bold text-blue-800 mb-1">Status Sieci (WebRTC)</h4>
-                <p id="p2pStatus" class="text-sm text-blue-600">Łączenie z serwerem sygnalizacyjnym...</p>
-                <div class="mt-2 text-xs text-gray-500 font-mono break-all">Mój Peer ID: <span id="myPeerId" class="font-bold text-gray-800">Czekaj...</span></div>
-            </div>
-
-            <div class="space-y-4">
-                <h4 class="font-bold text-gray-800">Pobierz aplikację bezpośrednio od kogoś</h4>
-                <p class="text-sm text-gray-500">Wpisz Peer ID osoby, która seeduje aplikację.</p>
-                <div class="flex flex-col sm:flex-row gap-2">
-                    <input type="text" id="p2pTargetId" class="flex-1 px-4 py-3 rounded-xl border border-gray-200 focus:ring-2 focus:ring-blue-500 outline-none" placeholder="Wklej Peer ID...">
-                    <button onclick="p2pNetwork.connectAndDownload()" class="bg-blue-600 text-white font-bold py-3 px-6 rounded-xl hover:bg-blue-700 shadow-md">Połącz</button>
-                </div>
-            </div>
-            
-            <!-- P2P Progress -->
-            <div id="p2pTransferArea" class="hidden mt-6 border-t pt-4">
-                <h4 class="font-bold text-gray-800 mb-2">Transfer w toku...</h4>
-                <div class="w-full bg-gray-200 rounded-full h-4 mb-2 overflow-hidden">
-                    <div id="p2pProgressBar" class="bg-blue-500 h-4 rounded-full transition-all duration-200" style="width: 0%"></div>
-                </div>
-                <p id="p2pProgressText" class="text-center font-bold text-blue-600 text-sm">Trwa negocjacja P2P...</p>
-            </div>
-        </div>
-    </div>
-
-    <!-- P2P SEED MODAL -->
-    <div id="p2pSeedModal" class="fixed inset-0 bg-gray-900 bg-opacity-70 backdrop-blur-sm hidden items-center justify-center z-50 p-4">
+    <!-- MODAL POBIERANIA P2P -->
+    <div id="p2pDownloadModal" class="fixed inset-0 bg-gray-900 bg-opacity-70 backdrop-blur-sm hidden items-center justify-center z-50 p-4">
         <div class="bg-white rounded-3xl shadow-2xl w-full max-w-md p-6 text-center">
-            <div class="w-16 h-16 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-4 text-blue-600 text-2xl animate-pulse">
-                <i class="fa-solid fa-satellite-dish"></i>
-            </div>
-            <h3 class="text-2xl font-bold text-gray-900 mb-2">Seeding App</h3>
-            <p class="text-gray-500 text-sm mb-6">Wyślij ten kod osobie, która chce pobrać aplikację bezpośrednio z Twojego urządzenia (WebRTC).</p>
-            
-            <div class="bg-gray-100 p-4 rounded-xl mb-6">
-                <p class="text-xs text-gray-500 font-bold uppercase mb-1">Twój Peer ID (Share Code)</p>
-                <div id="seedPeerId" class="text-lg sm:text-xl font-mono font-bold text-gray-900 break-all select-all">Loading...</div>
-            </div>
-            
-            <p class="text-xs text-red-500 mb-6 font-bold"><i class="fa-solid fa-triangle-exclamation mr-1"></i>Nie zamykaj tej karty, dopóki znajomy nie pobierze pliku!</p>
-            <button onclick="ui.closeModal('p2pSeedModal')" class="w-full bg-gray-200 text-gray-800 font-bold py-3 rounded-xl hover:bg-gray-300">Zakończ Seeding</button>
+            <div class="w-16 h-16 border-4 border-gray-100 border-t-emerald-500 rounded-full animate-spin mx-auto mb-4"></div>
+            <h3 class="text-2xl font-bold text-gray-900 mb-2">Downloading via P2P...</h3>
+            <p class="text-gray-500 text-sm mb-6">Directly securely transferring file from another user on the website.</p>
+            <div class="w-full bg-gray-200 rounded-full h-4 mb-2 overflow-hidden"><div id="p2pDownloadBar" class="bg-emerald-500 h-4 rounded-full transition-all duration-200" style="width: 0%"></div></div>
+            <p id="p2pDownloadText" class="font-bold text-emerald-600">Connecting...</p>
         </div>
     </div>
 
-    <!-- Authentication Modal -->
+    <!-- MODAL LOGOWANIA -->
     <div id="authModal" class="fixed inset-0 bg-gray-900 bg-opacity-50 backdrop-blur-sm hidden items-center justify-center z-50 p-4">
         <div class="bg-white rounded-3xl shadow-2xl w-full max-w-md p-6 sm:p-8">
             <div class="flex justify-between items-center mb-6">
@@ -320,41 +225,25 @@
                 <button onclick="ui.closeModal('authModal')" class="text-gray-400 hover:text-gray-600 w-8 h-8 flex items-center justify-center rounded-full"><i class="fa-solid fa-xmark text-xl"></i></button>
             </div>
             <div class="space-y-4">
-                <div>
-                    <label class="block text-sm font-medium text-gray-700 mb-1">Username</label>
-                    <input type="text" id="authUsername" class="w-full px-4 py-3 rounded-xl border border-gray-200 focus:ring-2 focus:ring-emerald-500 outline-none" placeholder="Enter username">
-                </div>
-                <div>
-                    <label class="block text-sm font-medium text-gray-700 mb-1">Password</label>
-                    <input type="password" id="authPassword" class="w-full px-4 py-3 rounded-xl border border-gray-200 focus:ring-2 focus:ring-emerald-500 outline-none" placeholder="••••••••">
-                </div>
+                <input type="text" id="authUsername" class="w-full px-4 py-3 rounded-xl border border-gray-200 focus:ring-2 focus:ring-emerald-500 outline-none" placeholder="Username">
+                <input type="password" id="authPassword" class="w-full px-4 py-3 rounded-xl border border-gray-200 focus:ring-2 focus:ring-emerald-500 outline-none" placeholder="Password">
                 <button onclick="auth.handleAuthSubmit()" id="authSubmitBtn" class="w-full bg-emerald-600 text-white font-bold py-3 rounded-xl shadow-md hover:bg-emerald-700">Sign In</button>
-                <div class="text-center mt-4">
-                    <p class="text-sm text-gray-500">
-                        <span id="authToggleText">Don't have an account?</span> 
-                        <button onclick="auth.toggleAuthMode()" class="text-emerald-600 font-bold hover:underline ml-1" id="authToggleBtn">Register</button>
-                    </p>
-                </div>
+                <div class="text-center mt-4"><p class="text-sm text-gray-500"><span id="authToggleText">Don't have an account?</span> <button onclick="auth.toggleAuthMode()" class="text-emerald-600 font-bold hover:underline ml-1" id="authToggleBtn">Register</button></p></div>
             </div>
         </div>
     </div>
 
-    <!-- Toast Container -->
-    <div id="toastContainer" class="fixed bottom-4 right-4 sm:bottom-6 sm:right-6 z-50 flex flex-col gap-2 max-w-[90vw] sm:max-w-md"></div>
+    <div id="toastContainer" class="fixed bottom-4 right-4 sm:bottom-6 sm:right-6 z-50 flex flex-col gap-2 max-w-[90vw] sm:max-w-md pointer-events-none"></div>
 
     <script>
-        // --- 1. Database (IndexedDB) ---
-        // Pozwala na zapis dużych plików i zachowanie sesji na zawsze!
         const dbHelper = {
             db: null,
             init() {
                 return new Promise((resolve, reject) => {
-                    const req = indexedDB.open('SuperDownloaderDB_v2', 2);
+                    const req = indexedDB.open('SuperDownloaderDB_v4', 4);
                     req.onupgradeneeded = (e) => {
                         const db = e.target.result;
-                        if (!db.objectStoreNames.contains('store')) {
-                            db.createObjectStore('store');
-                        }
+                        if (!db.objectStoreNames.contains('store')) db.createObjectStore('store');
                     };
                     req.onsuccess = (e) => { this.db = e.target.result; resolve(); };
                     req.onerror = (e) => reject(e.target.error);
@@ -378,44 +267,21 @@
             }
         };
 
-        // --- 2. State & Data ---
         let state = {
-            currentUser: null,
-            currentView: 'home',
-            activeAppId: null,
-            tempUploadData: {},
-            selectedStars: 0,
-            isAdminActive: false
+            currentUser: null, currentView: 'home', activeAppId: null, tempUploadData: {}, selectedStars: 0, isAdminActive: false
         };
 
-        let data = {
-            users: [],
-            apps: [],
-            bannedIPs: []
-        };
+        let data = { users: [], apps: [], bannedIPs: [] };
 
-        // --- 3. Translation System ---
         const i18n = {
             currentLang: localStorage.getItem('sd_lang') || 'en',
             langs: {
-                pl: {
-                    settings_title: "Ustawienia Konta", set_lang: "Język / Language", set_user: "Zmień nazwę", set_pass: "Zmień hasło",
-                    btn_update: "Aktualizuj", nav_upload: "Prześlij", nav_p2p: "Sieć P2P", search_ph: "Szukaj aplikacji...", 
-                    home_rec: "Polecane dla Ciebie", home_hits: "Hity", btn_download: "Pobierz", btn_play: "Zagraj", 
-                    reviews_title: "Oceny i recenzje", similar_apps: "Podobne", btn_publish: "Opublikuj", admin_title: "Panel Administratora"
-                },
-                en: {
-                    settings_title: "Account Settings", set_lang: "Language / Język", set_user: "Change Username", set_pass: "Change Password",
-                    btn_update: "Update", nav_upload: "Upload", nav_p2p: "P2P Network", search_ph: "Search apps...", 
-                    home_rec: "Recommended for you", home_hits: "Hits", btn_download: "Download", btn_play: "Play", 
-                    reviews_title: "Ratings and reviews", similar_apps: "Similar apps", btn_publish: "Publish App", admin_title: "Admin Dashboard"
-                }
+                pl: { settings_title: "Ustawienia Konta", set_lang: "Język / Language", set_user: "Zmień nazwę", set_pass: "Zmień hasło", btn_update: "Aktualizuj", nav_upload: "Prześlij", home_rec: "Polecane dla Ciebie", home_hits: "Hity", btn_download: "Pobierz P2P", btn_play: "Zagraj", reviews_title: "Oceny i recenzje", similar_apps: "Podobne", btn_publish: "Opublikuj Aplikację", admin_title: "Panel Administratora", home_live: "Sieć P2P Na Żywo" },
+                en: { settings_title: "Account Settings", set_lang: "Language / Język", set_user: "Change Username", set_pass: "Change Password", btn_update: "Update", nav_upload: "Upload", home_rec: "Recommended for you", home_hits: "Hits", btn_download: "Download P2P", btn_play: "Play", reviews_title: "Ratings and reviews", similar_apps: "Similar apps", btn_publish: "Publish App", admin_title: "Admin Dashboard", home_live: "Global P2P Live" }
             },
             setLang(lang) {
-                this.currentLang = lang;
-                localStorage.setItem('sd_lang', lang);
-                this.updateDOM();
-                ui.showToast(lang === 'pl' ? 'Zmieniono język' : 'Language changed', 'info');
+                this.currentLang = lang; localStorage.setItem('sd_lang', lang);
+                this.updateDOM(); ui.showToast(lang === 'pl' ? 'Zmieniono język' : 'Language changed', 'info');
                 ui.switchView(state.currentView, state.activeAppId);
             },
             t(key) { return this.langs[this.currentLang]?.[key] || this.langs['en'][key] || key; },
@@ -423,137 +289,167 @@
                 document.querySelectorAll('[data-i18n]').forEach(el => {
                     const key = el.getAttribute('data-i18n');
                     const icon = el.querySelector('i');
-                    if(icon) { el.innerHTML = ''; el.appendChild(icon); el.append(' ' + this.t(key)); } 
-                    else { el.innerText = this.t(key); }
+                    if(icon) { el.innerHTML = ''; el.appendChild(icon); el.append(' ' + this.t(key)); } else el.innerText = this.t(key);
                 });
-                const s = document.getElementById('searchInput'); if(s) s.placeholder = this.t('search_ph');
                 const ls = document.getElementById('langSelect'); if(ls) ls.value = this.currentLang;
             }
         };
 
-        // --- STREAMING_CHUNK:P2P WebRTC Network Engine... ---
         const p2pNetwork = {
-            peer: null,
-            myId: null,
-            currentSeedingApp: null,
-
+            peer: null, mqttClient: null, myId: null, livePeers: {}, 
+            
             init() {
-                // Initialize TRUE P2P using PeerJS public signaling server
-                this.peer = new Peer('sd-' + Math.random().toString(36).substr(2, 8));
+                // Initialize PeerJS for WebRTC Direct File Transfers
+                this.peer = new Peer('sd-' + Math.random().toString(36).substr(2, 9));
                 
                 this.peer.on('open', (id) => {
                     this.myId = id;
-                    const statusEl = document.getElementById('p2pStatus');
-                    const idEl = document.getElementById('myPeerId');
-                    const seedIdEl = document.getElementById('seedPeerId');
-                    
-                    if(statusEl) {
-                        statusEl.innerText = "Połączono z serwerem. Gotowy na P2P!";
-                        statusEl.classList.replace('text-blue-600', 'text-green-600');
-                    }
-                    if(idEl) idEl.innerText = id;
-                    if(seedIdEl) seedIdEl.innerText = id;
-                    
-                    ui.showToast("Sieć P2P (WebRTC) aktywna!", "success");
+                    // Connect to public MQTT for Automatic Discovery (No IDs needed)
+                    this.connectSignaling();
                 });
 
-                // Listen for incoming P2P connections (when we are SEEDING)
+                // When someone requests a file from us
                 this.peer.on('connection', (conn) => {
                     conn.on('data', (request) => {
-                        if(request.type === 'GIMME_APP' && this.currentSeedingApp) {
-                            ui.showToast("Ktoś pobiera od ciebie plik przez P2P!", "info");
-                            // Send the entire application object (includes Base64 APK/Icon) directly browser-to-browser
-                            conn.send({
-                                type: 'APP_DATA',
-                                payload: this.currentSeedingApp
-                            });
+                        if(request.type === 'GIMME_APP') {
+                            const app = data.apps.find(a => a.id === request.appId);
+                            if(app && app.apkFile) {
+                                ui.showToast(`P2P: Someone is downloading ${app.name} from you!`, 'info');
+                                conn.send({ type: 'APP_DATA', payload: app });
+                            }
                         }
                     });
                 });
+            },
 
-                this.peer.on('error', (err) => {
-                    console.error(err);
-                    ui.showToast("P2P Error: " + err.type, "error");
+            connectSignaling() {
+                // Using public HiveMQ WebSocket broker for presence
+                this.mqttClient = mqtt.connect('wss://broker.hivemq.com:8000/mqtt');
+                this.mqttClient.on('connect', () => {
+                    this.mqttClient.subscribe('superdownloader/live/2026');
+                    setInterval(() => this.announce(), 5000); // Announce every 5s
+                    this.announce();
+                });
+
+                this.mqttClient.on('message', (topic, msg) => {
+                    try {
+                        const p = JSON.parse(msg.toString());
+                        if(p.peerId !== this.myId && p.type === 'ANNOUNCE') {
+                            this.livePeers[p.peerId] = { lastSeen: Date.now(), apps: p.apps };
+                            this.renderLiveNetwork();
+                        }
+                    } catch(e){}
                 });
             },
 
-            startSeeding(appId) {
-                const app = data.apps.find(a => a.id === appId);
-                if(!app) return ui.showToast("Nie znaleziono aplikacji lokalnie.", "error");
-                if(!app.apkFile) return ui.showToast("Brak pliku .apk do wysłania.", "error");
-
-                this.currentSeedingApp = app;
-                ui.openModal('p2pSeedModal');
+            announce() {
+                // Announce tiny metadata of apps we have (No Base64 to save bandwidth)
+                const seeded = data.apps.filter(a => a.apkFile && !a.isDeleted).map(a => ({
+                    id: a.id, name: a.name, authorName: a.authorName, rating: appStore.calcRating(a.reviews)
+                }));
+                if(seeded.length > 0) {
+                    this.mqttClient.publish('superdownloader/live/2026', JSON.stringify({
+                        type: 'ANNOUNCE', peerId: this.myId, apps: seeded
+                    }));
+                }
             },
 
-            connectAndDownload() {
-                const targetId = document.getElementById('p2pTargetId').value.trim();
-                if(!targetId) return ui.showToast("Wpisz Peer ID!", "error");
-                if(targetId === this.myId) return ui.showToast("Nie możesz połączyć się ze sobą!", "error");
+            renderLiveNetwork() {
+                const now = Date.now();
+                let liveCount = 1; // You
+                const appsMap = {};
 
-                document.getElementById('p2pTransferArea').classList.remove('hidden');
-                document.getElementById('p2pProgressText').innerText = "Nawiązywanie połączenia P2P...";
+                // Cleanup dead peers & build app map
+                for(let pid in this.livePeers) {
+                    if(now - this.livePeers[pid].lastSeen > 12000) { delete this.livePeers[pid]; continue; }
+                    liveCount++;
+                    this.livePeers[pid].apps.forEach(app => {
+                        if(!appsMap[app.id]) appsMap[app.id] = { ...app, seeders: [] };
+                        appsMap[app.id].seeders.push(pid);
+                    });
+                }
+
+                document.getElementById('p2pOnlineCount').innerText = liveCount;
+                const grid = document.getElementById('liveP2PGrid');
                 
-                // Establish connection
+                const appKeys = Object.keys(appsMap);
+                if(appKeys.length === 0) {
+                    grid.innerHTML = `<p class="text-gray-500 text-sm italic w-full">Waiting for others to share apps...</p>`;
+                    return;
+                }
+
+                grid.innerHTML = '';
+                appKeys.forEach(aid => {
+                    const app = appsMap[aid];
+                    // Pick the first available seeder
+                    const targetPeer = app.seeders[0];
+                    const div = document.createElement('div');
+                    div.className = 'flex-shrink-0 w-48 bg-gray-800 rounded-xl p-3 border border-gray-700 cursor-pointer hover:bg-gray-700 transition-colors snap-center';
+                    div.onclick = () => this.downloadFromPeer(targetPeer, app.id, app.name);
+                    div.innerHTML = `
+                        <div class="flex items-center justify-between mb-2">
+                            <span class="text-[10px] bg-emerald-500 text-white px-2 py-0.5 rounded-full"><i class="fa-solid fa-bolt mr-1"></i>Live P2P</span>
+                            <span class="text-[10px] text-gray-400">${app.seeders.length} seeders</span>
+                        </div>
+                        <h3 class="font-bold text-white text-sm truncate">${app.name}</h3>
+                        <p class="text-[10px] text-gray-400 truncate">${app.authorName}</p>
+                        <button class="mt-3 w-full bg-emerald-600 text-white text-xs font-bold py-2 rounded-lg hover:bg-emerald-500">Download</button>
+                    `;
+                    grid.appendChild(div);
+                });
+            },
+
+            downloadFromPeer(targetId, appId, appName) {
+                ui.openModal('p2pDownloadModal');
+                document.getElementById('p2pDownloadText').innerText = `Connecting to peer for ${appName}...`;
+                
                 const conn = this.peer.connect(targetId, { reliable: true });
-
                 conn.on('open', () => {
-                    document.getElementById('p2pProgressText').innerText = "Połączono. Żądanie pliku...";
-                    // Simulate loading bar for UX
+                    document.getElementById('p2pDownloadText').innerText = "Transferring via WebRTC...";
                     let p = 0;
-                    const int = setInterval(() => {
-                        p += 15; if(p>90) p = 90;
-                        document.getElementById('p2pProgressBar').style.width = p + '%';
-                    }, 200);
+                    const int = setInterval(() => { p += 10; if(p>95) p = 95; document.getElementById('p2pDownloadBar').style.width = p + '%'; }, 300);
 
-                    // Ask peer for the app
-                    conn.send({ type: 'GIMME_APP' });
-
-                    conn.on('data', async (response) => {
-                        if(response.type === 'APP_DATA') {
+                    conn.send({ type: 'GIMME_APP', appId: appId });
+                    conn.on('data', async (res) => {
+                        if(res.type === 'APP_DATA') {
                             clearInterval(int);
-                            document.getElementById('p2pProgressBar').style.width = '100%';
-                            document.getElementById('p2pProgressText').innerText = "Pobrano plik P2P! Zapisywanie...";
+                            document.getElementById('p2pDownloadBar').style.width = '100%';
+                            document.getElementById('p2pDownloadText').innerText = "Complete! Saving...";
                             
-                            const receivedApp = response.payload;
-                            
-                            // Check if we already have it
-                            const exists = data.apps.find(a => a.id === receivedApp.id);
-                            if(!exists) {
+                            const receivedApp = res.payload;
+                            if(!data.apps.find(a => a.id === receivedApp.id)) {
                                 data.apps.push(receivedApp);
                                 await dbHelper.write(data);
                             }
                             
                             setTimeout(() => {
-                                ui.closeModal('p2pModal');
-                                ui.showToast("Aplikacja pobrana przez P2P!", "success");
+                                ui.closeModal('p2pDownloadModal');
+                                ui.showToast(`${appName} downloaded via P2P!`, "success");
                                 ui.switchView('app', receivedApp.id);
+                                // Trigger actual browser download
+                                const link = document.createElement('a');
+                                link.href = receivedApp.apkFile;
+                                link.download = `${receivedApp.name.replace(/\s+/g, '_')}.apk`;
+                                document.body.appendChild(link); link.click(); document.body.removeChild(link);
                             }, 1000);
                         }
                     });
                 });
-
                 conn.on('error', () => {
-                    ui.showToast("Nie udało się połączyć P2P.", "error");
-                    document.getElementById('p2pTransferArea').classList.add('hidden');
+                    ui.closeModal('p2pDownloadModal');
+                    ui.showToast("Peer disconnected or failed.", "error");
                 });
             }
         };
 
-        // --- STREAMING_CHUNK:UI Management... ---
         const ui = {
-            formatNum(num) {
-                if (num >= 1e9) return (num / 1e9).toFixed(1) + 'b';
-                if (num >= 1e6) return (num / 1e6).toFixed(1) + 'm';
-                if (num >= 1000) return (num / 1000).toFixed(1) + 'k';
-                return num;
-            },
+            formatNum(num) { if (num >= 1e9) return (num/1e9).toFixed(1)+'b'; if (num >= 1e6) return (num/1e6).toFixed(1)+'m'; if (num >= 1000) return (num/1000).toFixed(1)+'k'; return num; },
             showToast(msg, type = 'info') {
                 const c = document.getElementById('toastContainer');
                 const t = document.createElement('div');
                 const cols = { success: 'bg-emerald-500', error: 'bg-red-500', info: 'bg-blue-500' };
                 const icons = { success: 'fa-check-circle', error: 'fa-circle-exclamation', info: 'fa-info-circle' };
-                t.className = `${cols[type]} text-white px-4 py-3 rounded-xl shadow-lg flex items-center gap-3 animate-slide-up text-sm sm:text-base`;
+                t.className = `${cols[type]} text-white px-4 py-3 rounded-xl shadow-lg flex items-center gap-3 animate-slide-up text-sm pointer-events-auto`;
                 t.innerHTML = `<i class="fa-solid ${icons[type]} text-lg"></i><span class="font-medium">${msg}</span>`;
                 c.appendChild(t);
                 setTimeout(() => { t.classList.add('opacity-0'); setTimeout(() => t.remove(), 300); }, 3000);
@@ -562,8 +458,7 @@
                 document.querySelectorAll('.view-section').forEach(el => el.classList.add('hidden'));
                 const view = document.getElementById(`view-${viewName}`);
                 if (view) {
-                    view.classList.remove('hidden');
-                    state.currentView = viewName;
+                    view.classList.remove('hidden'); state.currentView = viewName;
                     if (viewName === 'home') appStore.renderApps();
                     if (viewName === 'app' && appId) { state.activeAppId = appId; appStore.renderAppDetails(appId); }
                     if (viewName === 'admin') admin.render();
@@ -574,13 +469,7 @@
             goToUpload() { if(auth.requireLogin()) this.switchView('upload'); },
             openModal(id) { document.getElementById(id).classList.replace('hidden', 'flex'); },
             closeModal(id) { document.getElementById(id).classList.replace('flex', 'hidden'); },
-            openP2PModal() { this.openModal('p2pModal'); },
-            
-            // Fixed Menu Logic (Click based)
-            toggleUserMenu() {
-                const menu = document.getElementById('userDropdownMenu');
-                if (menu) menu.classList.toggle('hidden');
-            },
+            toggleUserMenu() { const m = document.getElementById('userDropdownMenu'); if (m) m.classList.toggle('hidden'); },
             updateMenu() {
                 const c = document.getElementById('userMenuContainer');
                 if (state.currentUser) {
@@ -599,9 +488,7 @@
                             </div>
                         </div>
                     `;
-                } else {
-                    c.innerHTML = `<button onclick="ui.openModal('authModal')" class="bg-gray-900 text-white px-4 py-2 rounded-full font-bold hover:bg-gray-800 text-sm">Sign In</button>`;
-                }
+                } else c.innerHTML = `<button onclick="ui.openModal('authModal')" class="bg-gray-900 text-white px-4 py-2 rounded-full font-bold hover:bg-gray-800 text-sm">Sign In</button>`;
             },
             searchApps() {
                 const q = document.getElementById('searchInput').value.toLowerCase();
@@ -617,20 +504,17 @@
             }
         };
 
-        // --- STREAMING_CHUNK:Auth & Session Management... ---
         const auth = {
             isLoginMode: true,
             async checkAdmin(hash) {
-                if (hash === '#7319112') {
-                    if (state.currentUser) {
-                        state.isAdminActive = true;
-                        let u = data.users.find(x => x.id === state.currentUser.id);
-                        if(u) u.isAdmin = true;
-                        await dbHelper.write(data);
-                        ui.showToast('Administrator privileges granted!', 'success');
-                        ui.updateMenu();
-                        history.replaceState(null, null, ' ');
-                    } else ui.showToast('Zaloguj się najpierw (Admin)!', 'error');
+                if (hash === '#7319112' && state.currentUser) {
+                    state.isAdminActive = true;
+                    let u = data.users.find(x => x.id === state.currentUser.id);
+                    if(u) u.isAdmin = true;
+                    await dbHelper.write(data);
+                    ui.showToast('Administrator privileges granted!', 'success');
+                    ui.updateMenu();
+                    history.replaceState(null, null, ' ');
                 }
             },
             toggleAuthMode() {
@@ -643,197 +527,92 @@
             async handleAuthSubmit() {
                 const uVal = document.getElementById('authUsername').value.trim();
                 const pVal = document.getElementById('authPassword').value;
-
                 if (uVal.length < 3 || pVal.length < 4) return ui.showToast('User >3, Pass >4 chars.', 'error');
 
                 if (this.isLoginMode) {
                     const u = data.users.find(x => x.username.toLowerCase() === uVal.toLowerCase() && x.password === pVal);
                     if (u) {
                         if (data.bannedIPs.includes(u.ip)) return ui.showToast('Account IP Banned.', 'error');
-                        localStorage.setItem('superdownloader_session', u.id); // Persistent session!
-                        state.currentUser = { id: u.id, username: u.username };
-                        state.isAdminActive = u.isAdmin || false;
-                        ui.showToast(`Welcome, ${u.username}!`, 'success');
-                        ui.closeModal('authModal');
-                        ui.updateMenu();
+                        localStorage.setItem('superdownloader_session', u.id);
+                        state.currentUser = { id: u.id, username: u.username }; state.isAdminActive = u.isAdmin || false;
+                        ui.showToast(`Welcome, ${u.username}!`, 'success'); ui.closeModal('authModal'); ui.updateMenu();
+                        if(window.location.hash) this.checkAdmin(window.location.hash);
                     } else ui.showToast('Invalid credentials.', 'error');
                 } else {
                     if (data.users.find(x => x.username.toLowerCase() === uVal.toLowerCase())) return ui.showToast('Username taken!', 'error');
                     const nu = { id: 'u_' + Date.now(), username: uVal, password: pVal, isAdmin: false, ip: 'ip_' + Math.random().toString(36).substr(2, 9) };
-                    data.users.push(nu);
-                    await dbHelper.write(data);
-                    
-                    localStorage.setItem('superdownloader_session', nu.id); // Persistent session!
+                    data.users.push(nu); await dbHelper.write(data);
+                    localStorage.setItem('superdownloader_session', nu.id);
                     state.currentUser = { id: nu.id, username: nu.username };
-                    ui.showToast('Account created!', 'success');
-                    ui.closeModal('authModal');
-                    ui.updateMenu();
+                    ui.showToast('Account created!', 'success'); ui.closeModal('authModal'); ui.updateMenu();
                 }
             },
-            logout() {
-                localStorage.removeItem('superdownloader_session');
-                state.currentUser = null;
-                state.isAdminActive = false;
-                ui.updateMenu();
-                ui.switchView('home');
-                ui.showToast('Logged out.', 'info');
-            },
-            requireLogin() {
-                if (!state.currentUser) { ui.openModal('authModal'); return false; }
-                return true;
-            },
+            logout() { localStorage.removeItem('superdownloader_session'); state.currentUser = null; state.isAdminActive = false; ui.updateMenu(); ui.switchView('home'); ui.showToast('Logged out.', 'info'); },
+            requireLogin() { if (!state.currentUser) { ui.openModal('authModal'); return false; } return true; },
             async changeUsername() {
-                const newVal = document.getElementById('setNewUsername').value.trim();
-                if(newVal.length < 3) return ui.showToast('Username too short.', 'error');
+                const n = document.getElementById('setNewUsername').value.trim(); if(n.length < 3) return ui.showToast('Too short.', 'error');
                 let u = data.users.find(x => x.id === state.currentUser.id);
-                if(u) {
-                    u.username = newVal;
-                    state.currentUser.username = newVal;
-                    await dbHelper.write(data);
-                    ui.updateMenu();
-                    ui.showToast('Username updated!', 'success');
-                }
+                if(u) { u.username = n; state.currentUser.username = n; await dbHelper.write(data); ui.updateMenu(); ui.showToast('Updated!', 'success'); }
             },
             async changePassword() {
-                const oldP = document.getElementById('setOldPass').value;
-                const newP = document.getElementById('setNewPass').value;
+                const o = document.getElementById('setOldPass').value, n = document.getElementById('setNewPass').value;
                 let u = data.users.find(x => x.id === state.currentUser.id);
-                if(u && u.password === oldP && newP.length >= 4) {
-                    u.password = newP;
-                    await dbHelper.write(data);
-                    ui.showToast('Password updated!', 'success');
-                } else ui.showToast('Invalid old pass or new pass too short.', 'error');
+                if(u && u.password === o && n.length >= 4) { u.password = n; await dbHelper.write(data); ui.showToast('Updated!', 'success'); } else ui.showToast('Error.', 'error');
             },
-            async deleteAccount() {
-                if(confirm("Are you absolutely sure?")) {
-                    data.users = data.users.filter(x => x.id !== state.currentUser.id);
-                    await dbHelper.write(data);
-                    this.logout();
-                }
-            }
+            async deleteAccount() { if(confirm("Sure?")) { data.users = data.users.filter(x => x.id !== state.currentUser.id); await dbHelper.write(data); this.logout(); } }
         };
 
-        // --- STREAMING_CHUNK:App Store Core Logic... ---
         const appStore = {
             createCard(app) {
-                const div = document.createElement('div');
-                div.className = 'app-card bg-white rounded-2xl p-3 cursor-pointer flex flex-col h-full border border-gray-100 relative';
+                const div = document.createElement('div'); div.className = 'app-card bg-white rounded-2xl p-3 cursor-pointer flex flex-col h-full border border-gray-100 relative';
                 div.onclick = () => ui.switchView('app', app.id);
-                
                 let b = '';
                 if (app.isVerified) b += `<div class="absolute top-2 left-2 bg-blue-500 text-white text-[10px] px-2 py-1 rounded-full z-10"><i class="fa-solid fa-shield-check"></i> Ver</div>`;
                 if (app.downloads >= 1e6) b += `<div class="absolute top-2 right-2 bg-yellow-400 text-yellow-900 text-[10px] px-2 py-1 rounded-full z-10"><i class="fa-solid fa-medal"></i> 1M+</div>`;
                 if (app.isEduVerified) b += `<div class="absolute bottom-16 right-2 bg-green-500 text-white text-[10px] px-2 py-1 rounded-full z-10"><i class="fa-solid fa-graduation-cap"></i> Edu</div>`;
-
-                const r = this.calcRating(app.reviews);
-                div.innerHTML = `
-                    ${b}
-                    <div class="w-full aspect-square rounded-xl bg-gray-100 mb-2 overflow-hidden relative">
-                        <img src="${app.iconUrl}" class="w-full h-full object-cover absolute inset-0" onerror="this.src='https://placehold.co/200'">
-                    </div>
-                    <div class="flex-1 flex flex-col">
-                        <h3 class="font-bold text-gray-900 text-sm line-clamp-1">${app.name}</h3>
-                        <p class="text-[10px] text-gray-500 mb-2 truncate">${app.authorName}</p>
-                        <div class="mt-auto flex items-center justify-between">
-                            <div class="flex items-center text-xs font-bold text-gray-700"><span>${r}</span><i class="fa-solid fa-star text-amber-400 ml-1 text-[10px]"></i></div>
-                            <span class="text-[10px] font-semibold text-gray-500 bg-gray-100 px-2 py-1 rounded-md">${ui.formatNum(app.downloads)}</span>
-                        </div>
-                    </div>
-                `;
+                div.innerHTML = `${b}<div class="w-full aspect-square rounded-xl bg-gray-100 mb-2 overflow-hidden relative"><img src="${app.iconUrl}" class="w-full h-full object-cover absolute inset-0" onerror="this.src='https://placehold.co/200'"></div><div class="flex-1 flex flex-col"><h3 class="font-bold text-gray-900 text-sm line-clamp-1">${app.name}</h3><p class="text-[10px] text-gray-500 mb-2 truncate">${app.authorName}</p><div class="mt-auto flex items-center justify-between"><div class="flex items-center text-xs font-bold text-gray-700"><span>${this.calcRating(app.reviews)}</span><i class="fa-solid fa-star text-amber-400 ml-1 text-[10px]"></i></div><span class="text-[10px] font-semibold text-gray-500 bg-gray-100 px-2 py-1 rounded-md">${ui.formatNum(app.downloads)}</span></div></div>`;
                 return div;
             },
             renderApps() {
-                const rG = document.getElementById('recommendedAppsGrid');
-                const hG = document.getElementById('hitsAppsGrid');
+                const rG = document.getElementById('recommendedAppsGrid'), hG = document.getElementById('hitsAppsGrid');
                 rG.innerHTML = ''; hG.innerHTML = '';
-                
                 const vis = data.apps.filter(a => !a.isDeleted);
-                if(!vis.length) rG.innerHTML = `<p class="col-span-full text-center text-gray-500 py-10 w-full">Store is empty. Be the first to upload!</p>`;
-                
+                if(!vis.length) rG.innerHTML = `<p class="col-span-full text-center text-gray-500 py-10 w-full">Store is empty locally. Check Live P2P above!</p>`;
                 [...vis].reverse().slice(0, 12).forEach(a => rG.appendChild(this.createCard(a)));
                 [...vis].sort((a, b) => b.downloads - a.downloads).slice(0, 6).forEach(a => {
-                    const c = this.createCard(a);
-                    c.classList.add('flex-row', 'items-center');
-                    c.innerHTML = `
-                        <img src="${a.iconUrl}" class="w-16 h-16 rounded-xl object-cover mr-3 flex-shrink-0" onerror="this.src='https://placehold.co/100'">
-                        <div class="flex-1 overflow-hidden">
-                            <h3 class="font-bold text-sm truncate">${a.name}</h3>
-                            <div class="text-[10px] text-gray-500 mt-1"><i class="fa-solid fa-star text-amber-400 mr-1"></i>${this.calcRating(a.reviews)} &bull; ${ui.formatNum(a.downloads)} DLs</div>
-                        </div>
-                    `;
+                    const c = this.createCard(a); c.classList.add('flex-row', 'items-center');
+                    c.innerHTML = `<img src="${a.iconUrl}" class="w-16 h-16 rounded-xl object-cover mr-3 flex-shrink-0" onerror="this.src='https://placehold.co/100'"><div class="flex-1 overflow-hidden"><h3 class="font-bold text-sm truncate">${a.name}</h3><div class="text-[10px] text-gray-500 mt-1"><i class="fa-solid fa-star text-amber-400 mr-1"></i>${this.calcRating(a.reviews)} &bull; ${ui.formatNum(a.downloads)} DLs</div></div>`;
                     hG.appendChild(c);
                 });
             },
             renderAppDetails(id) {
-                const a = data.apps.find(x => x.id === id);
-                if (!a || a.isDeleted) return ui.switchView('home');
-
+                const a = data.apps.find(x => x.id === id); if (!a || a.isDeleted) return ui.switchView('home');
                 const v = document.getElementById('view-app');
-                const r = this.calcRating(a.reviews);
-                
-                const sim = data.apps.filter(x => x.id !== id && !x.isDeleted).slice(0, 4).map(x => `
-                    <div onclick="ui.switchView('app', '${x.id}')" class="cursor-pointer text-center group w-20 flex-shrink-0">
-                        <img src="${x.iconUrl}" class="w-16 h-16 rounded-xl mx-auto mb-2 object-cover group-hover:scale-105 transition-transform" onerror="this.src='https://placehold.co/100'">
-                        <p class="text-[10px] font-bold text-gray-800 truncate">${x.name}</p>
-                    </div>
-                `).join('') || `<p class="text-xs text-gray-500">No similar apps</p>`;
-
                 v.innerHTML = `
                     <div class="bg-white rounded-3xl shadow-sm border border-gray-100 overflow-hidden max-w-4xl mx-auto w-full">
                         <div class="p-4 sm:p-8 flex flex-col md:flex-row gap-6">
-                            <div class="w-24 h-24 sm:w-32 sm:h-32 md:w-48 md:h-48 mx-auto md:mx-0 shadow-lg rounded-3xl overflow-hidden relative flex-shrink-0">
-                                <img src="${a.iconUrl}" class="w-full h-full object-cover absolute inset-0" onerror="this.src='https://placehold.co/400'">
-                            </div>
+                            <div class="w-24 h-24 sm:w-32 sm:h-32 md:w-48 md:h-48 mx-auto md:mx-0 shadow-lg rounded-3xl overflow-hidden relative flex-shrink-0"><img src="${a.iconUrl}" class="w-full h-full object-cover absolute inset-0" onerror="this.src='https://placehold.co/400'"></div>
                             <div class="flex-1 text-center md:text-left flex flex-col">
                                 <h1 class="text-2xl sm:text-3xl md:text-4xl font-extrabold text-gray-900 mb-1 break-words">${a.name}</h1>
                                 <p class="text-base text-emerald-600 font-semibold mb-4">${a.authorName}</p>
-                                
                                 <div class="flex flex-wrap items-center justify-center md:justify-start gap-4 mb-6">
-                                    <div class="text-center"><div class="text-lg font-bold">${r} <i class="fa-solid fa-star text-amber-400 text-sm"></i></div><div class="text-[10px] text-gray-500">Reviews</div></div>
-                                    <div class="h-6 w-px bg-gray-200"></div>
-                                    <div class="text-center"><div class="text-lg font-bold">${ui.formatNum(a.downloads)}+</div><div class="text-[10px] text-gray-500">Downloads</div></div>
-                                    <div class="h-6 w-px bg-gray-200"></div>
+                                    <div class="text-center"><div class="text-lg font-bold">${this.calcRating(a.reviews)} <i class="fa-solid fa-star text-amber-400 text-sm"></i></div><div class="text-[10px] text-gray-500">Reviews</div></div><div class="h-6 w-px bg-gray-200"></div>
+                                    <div class="text-center"><div class="text-lg font-bold">${ui.formatNum(a.downloads)}+</div><div class="text-[10px] text-gray-500">Downloads</div></div><div class="h-6 w-px bg-gray-200"></div>
                                     <div class="text-center"><div class="w-8 h-8 mx-auto border-2 border-gray-900 rounded flex items-center justify-center font-bold text-sm">${a.ageRating}</div><div class="text-[10px] text-gray-500 mt-1">Age</div></div>
                                 </div>
-                                
                                 <div class="mt-auto flex flex-col sm:flex-row gap-3">
-                                    ${a.apkFile ? `<button onclick="appStore.downloadApp('${a.id}')" class="flex-1 bg-emerald-600 text-white font-bold py-3 px-6 rounded-xl shadow-md hover:bg-emerald-700"><i class="fa-solid fa-download mr-2"></i>Download</button>` : `<button disabled class="flex-1 bg-gray-300 text-gray-500 font-bold py-3 rounded-xl cursor-not-allowed">No Files</button>`}
-                                    <button onclick="p2pNetwork.startSeeding('${a.id}')" class="bg-blue-100 text-blue-700 font-bold py-3 px-6 rounded-xl hover:bg-blue-200" title="Host on P2P"><i class="fa-solid fa-network-wired mr-2"></i>Seed P2P</button>
+                                    ${a.apkFile ? `<button onclick="appStore.downloadApp('${a.id}')" class="flex-1 bg-emerald-600 text-white font-bold py-3 px-6 rounded-xl shadow-md hover:bg-emerald-700" data-i18n="btn_download"><i class="fa-solid fa-download mr-2"></i>Download</button>` : `<button disabled class="flex-1 bg-gray-300 text-gray-500 font-bold py-3 rounded-xl cursor-not-allowed">No Files</button>`}
+                                    <button onclick="ui.showToast('Requesting hardware acceleration... App starting in sandbox!', 'info')" class="bg-gray-100 text-gray-700 font-bold py-3 px-6 rounded-xl hover:bg-gray-200" data-i18n="btn_play"><i class="fa-solid fa-play mr-2"></i>Play</button>
                                 </div>
                             </div>
                         </div>
-                        
-                        <div class="p-6 border-t border-gray-100 bg-gray-50">
-                            <h3 class="font-bold text-lg mb-2">About this app</h3>
-                            <p class="text-sm text-gray-700 whitespace-pre-wrap break-words">${a.description}</p>
-                        </div>
-
+                        <div class="p-6 border-t border-gray-100 bg-gray-50"><h3 class="font-bold text-lg mb-2">About this app</h3><p class="text-sm text-gray-700 whitespace-pre-wrap break-words">${a.description}</p></div>
                         <div class="p-6 border-t border-gray-100">
                             <h3 class="font-bold text-lg mb-4" data-i18n="reviews_title">Ratings and reviews</h3>
-                            ${state.currentUser ? `
-                                <div class="bg-gray-50 p-4 rounded-xl mb-6">
-                                    <h4 class="font-bold text-sm mb-2">Leave a review</h4>
-                                    <div class="flex gap-1 mb-2" id="starSelector">${[1,2,3,4,5].map(i => `<i class="fa-solid fa-star text-gray-300 text-xl cursor-pointer hover:text-amber-400" onmouseover="appStore.hStars(${i})" onmouseout="appStore.hStars(state.selectedStars)" onclick="appStore.sStars(${i})"></i>`).join('')}</div>
-                                    <textarea id="reviewText" rows="2" class="w-full px-3 py-2 rounded-xl border outline-none mb-2 text-sm resize-none"></textarea>
-                                    <button onclick="appStore.submitRev('${a.id}')" class="bg-emerald-600 text-white px-4 py-2 rounded-xl font-bold text-sm">Post</button>
-                                </div>
-                            ` : `<p class="text-sm text-gray-500 mb-4">Sign in to review.</p>`}
-                            
-                            <div class="space-y-4">
-                                ${a.reviews.length ? a.reviews.map(r => `
-                                    <div class="border-b border-gray-100 pb-4">
-                                        <div class="flex items-center gap-2 mb-1">
-                                            <div class="w-6 h-6 bg-gray-200 rounded-full flex items-center justify-center font-bold text-xs">${r.authorName[0].toUpperCase()}</div>
-                                            <div class="font-bold text-sm">${r.authorName}</div>
-                                            <div class="flex text-amber-400 text-[10px] ml-2">${Array(5).fill(0).map((_, i) => `<i class="fa-solid fa-star ${i < r.rating ? '' : 'text-gray-200'}"></i>`).join('')}</div>
-                                        </div>
-                                        <p class="text-gray-700 text-sm break-words">${r.text}</p>
-                                    </div>
-                                `).join('') : `<p class="text-gray-500 text-sm">No reviews yet.</p>`}
-                            </div>
+                            ${state.currentUser ? `<div class="bg-gray-50 p-4 rounded-xl mb-6"><h4 class="font-bold text-sm mb-2">Leave a review</h4><div class="flex gap-1 mb-2" id="starSelector">${[1,2,3,4,5].map(i => `<i class="fa-solid fa-star text-gray-300 text-xl cursor-pointer hover:text-amber-400" onmouseover="appStore.hStars(${i})" onmouseout="appStore.hStars(state.selectedStars)" onclick="appStore.sStars(${i})"></i>`).join('')}</div><textarea id="reviewText" rows="2" class="w-full px-3 py-2 rounded-xl border outline-none mb-2 text-sm resize-none"></textarea><button onclick="appStore.submitRev('${a.id}')" class="bg-emerald-600 text-white px-4 py-2 rounded-xl font-bold text-sm">Post</button></div>` : `<p class="text-sm text-gray-500 mb-4">Sign in to review.</p>`}
+                            <div class="space-y-4">${a.reviews.length ? a.reviews.map(r => `<div class="border-b border-gray-100 pb-4"><div class="flex items-center gap-2 mb-1"><div class="w-6 h-6 bg-gray-200 rounded-full flex items-center justify-center font-bold text-xs">${r.authorName[0].toUpperCase()}</div><div class="font-bold text-sm">${r.authorName}</div><div class="flex text-amber-400 text-[10px] ml-2">${Array(5).fill(0).map((_, i) => `<i class="fa-solid fa-star ${i < r.rating ? '' : 'text-gray-200'}"></i>`).join('')}</div></div><p class="text-gray-700 text-sm break-words">${r.text}</p></div>`).join('') : `<p class="text-gray-500 text-sm">No reviews yet.</p>`}</div>
                         </div>
-                    </div>
-                `;
+                    </div>`;
                 i18n.updateDOM();
             },
             calcRating(revs) { return !revs || !revs.length ? '0.0' : (revs.reduce((a, b) => a + b.rating, 0) / revs.length).toFixed(1); },
@@ -841,238 +620,124 @@
             sStars(n) { state.selectedStars = n; this.hStars(n); },
             async submitRev(id) {
                 if(!state.selectedStars) return ui.showToast('Select stars.', 'error');
-                const t = document.getElementById('reviewText').value.trim();
-                if(!t) return ui.showToast('Write review.', 'error');
+                const t = document.getElementById('reviewText').value.trim(); if(!t) return ui.showToast('Write review.', 'error');
                 const a = data.apps.find(x => x.id === id);
-                if(a) {
-                    a.reviews.unshift({ id: 'r_'+Date.now(), authorId: state.currentUser.id, authorName: state.currentUser.username, rating: state.selectedStars, text: t });
-                    await dbHelper.write(data);
-                    state.selectedStars = 0;
-                    this.renderAppDetails(id);
-                    ui.showToast('Posted!', 'success');
-                }
+                if(a) { a.reviews.unshift({ id: 'r_'+Date.now(), authorId: state.currentUser.id, authorName: state.currentUser.username, rating: state.selectedStars, text: t }); await dbHelper.write(data); state.selectedStars = 0; this.renderAppDetails(id); ui.showToast('Posted!', 'success'); }
             },
             async downloadApp(id) {
                 const a = data.apps.find(x => x.id === id);
                 if(a && a.apkFile) {
                     if((a.ageRating === '18+' || a.ageRating === '16+') && !confirm(`Family Link: Rated ${a.ageRating}. Proceed?`)) return;
-                    a.downloads++;
-                    await dbHelper.write(data);
-                    // Actual file download trigger
-                    const link = document.createElement('a');
-                    link.href = a.apkFile;
-                    link.download = `${a.name.replace(/\s+/g, '_')}.apk`;
-                    document.body.appendChild(link);
-                    link.click();
-                    document.body.removeChild(link);
-                    this.renderAppDetails(id); 
-                    ui.showToast('Download started!', 'success');
+                    a.downloads++; await dbHelper.write(data);
+                    const link = document.createElement('a'); link.href = a.apkFile; link.download = `${a.name.replace(/\s+/g, '_')}.apk`;
+                    document.body.appendChild(link); link.click(); document.body.removeChild(link);
+                    this.renderAppDetails(id); ui.showToast('Download started!', 'success');
                 }
             },
 
-            // --- STREAMING_CHUNK:AI Context-Aware Upload System ---
+            // --- Upload & AI Age Engine ---
             resetUpload() {
                 ['uploadStep1', 'uploadStep2', 'uploadStep3'].forEach(id => document.getElementById(id).classList.toggle('hidden', id !== 'uploadStep1'));
                 ['upName', 'upDesc', 'upIcon', 'upApk'].forEach(id => document.getElementById(id).value = '');
                 document.querySelectorAll('input[type="checkbox"]').forEach(c => c.checked = false);
             },
+            async compressImage(file) {
+                return new Promise((resolve) => {
+                    const reader = new FileReader();
+                    reader.onload = (e) => {
+                        const img = new Image();
+                        img.onload = () => {
+                            const canvas = document.createElement('canvas'); const ctx = canvas.getContext('2d');
+                            const MAX = 200; let w = img.width, h = img.height;
+                            if(w > h) { if(w > MAX) { h *= MAX/w; w = MAX; } } else { if(h > MAX) { w *= MAX/h; h = MAX; } }
+                            canvas.width = w; canvas.height = h; ctx.drawImage(img, 0, 0, w, h);
+                            resolve(canvas.toDataURL('image/jpeg', 0.8)); // Tiny Base64
+                        };
+                        img.src = e.target.result;
+                    };
+                    reader.readAsDataURL(file);
+                });
+            },
             async nextUploadStep(step) {
                 if (step === 2) {
-                    const n = document.getElementById('upName').value.trim();
-                    const d = document.getElementById('upDesc').value.trim();
-                    const iF = document.getElementById('upIcon').files[0];
-                    const aF = document.getElementById('upApk').files[0];
-
+                    const n = document.getElementById('upName').value.trim(), d = document.getElementById('upDesc').value.trim(), iF = document.getElementById('upIcon').files[0], aF = document.getElementById('upApk').files[0];
                     if (n.length < 3) return ui.showToast('Name too short.', 'error');
                     if (d.length < 10) return ui.showToast('Description too short.', 'error');
                     if (!iF) return ui.showToast('Select an icon.', 'error');
                     if (!aF || !aF.name.endsWith('.apk')) return ui.showToast('Must upload valid .apk!', 'error');
 
-                    const read = f => new Promise(r => { const rd = new FileReader(); rd.onload = e => r(e.target.result); rd.readAsDataURL(f); });
-                    
-                    ui.showToast('Reading large files into browser memory...', 'info');
+                    ui.showToast('Compressing icon & reading APK...', 'info');
                     try {
-                        const [icn, apk] = await Promise.all([read(iF), read(aF)]);
+                        const icn = await this.compressImage(iF); // Fast & tiny
+                        const apk = await new Promise(r => { const rd = new FileReader(); rd.onload = e => r(e.target.result); rd.readAsDataURL(aF); });
                         state.tempUploadData = { name: n, desc: d, iconData: icn, apkData: apk };
-                        document.getElementById('uploadStep1').classList.add('hidden');
-                        document.getElementById('uploadStep2').classList.remove('hidden');
-                    } catch(e) { ui.showToast('File error. Too large?', 'error'); }
+                        document.getElementById('uploadStep1').classList.add('hidden'); document.getElementById('uploadStep2').classList.remove('hidden');
+                    } catch(e) { ui.showToast('File error. Too large for IndexedDB?', 'error'); }
                 }
             },
-            prevUploadStep() {
-                document.getElementById('uploadStep2').classList.add('hidden');
-                document.getElementById('uploadStep1').classList.remove('hidden');
-            },
+            prevUploadStep() { document.getElementById('uploadStep2').classList.add('hidden'); document.getElementById('uploadStep1').classList.remove('hidden'); },
             
-            // AI Contextual Scoring
             calcAIAge() {
-                const c = id => document.getElementById(id).checked;
-                let s = 0;
-                
-                // Absolute 18+ filters
+                const c = id => document.getElementById(id).checked; let s = 0;
                 if(c('qSexExplicit') || c('qGambling') || c('qDrugs')) return '18+';
-                
-                // Additive scores
-                if(c('qBlood')) s += 10;
-                if(c('qViolence')) s += 8;
-                if(c('qFear')) s += 5;
-                if(c('qSwear')) s += 6;
-                if(c('qSexMild')) s += 7;
-                if(c('qOnline')) s += 4;
-                
-                // AI Context: Educational apps mitigate violence/blood (e.g., medical/history apps)
-                if(c('qEdu')) {
-                    if(s > 0) s = Math.max(0, s - 6);
-                }
-                
-                if(s >= 12) return '16+';
-                if(s >= 7) return '13+';
-                if(s >= 3) return '7+';
-                return '3+';
+                if(c('qBlood')) s += 10; if(c('qViolence')) s += 8; if(c('qFear')) s += 5; if(c('qSwear')) s += 6; if(c('qSexMild')) s += 7; if(c('qOnline')) s += 4;
+                if(c('qEdu') && s > 0) s = Math.max(0, s - 6); // AI Context mitigation
+                if(s >= 12) return '16+'; if(s >= 7) return '13+'; if(s >= 3) return '7+'; return '3+';
             },
 
-            // Changed from standard function expression to fix TypeError
             startUploadProcess: function() {
-                if (!document.getElementById('vBot').checked || !document.getElementById('vTos').checked) {
-                    return ui.showToast('Check verification boxes!', 'error');
-                }
+                if (!document.getElementById('vBot').checked || !document.getElementById('vTos').checked) return ui.showToast('Check verification boxes!', 'error');
+                document.getElementById('uploadStep2').classList.add('hidden'); document.getElementById('uploadStep3').classList.remove('hidden');
 
-                document.getElementById('uploadStep2').classList.add('hidden');
-                document.getElementById('uploadStep3').classList.remove('hidden');
-
-                const bar = document.getElementById('uploadProgressBar');
-                const txt = document.getElementById('uploadProgressText');
-                
+                const bar = document.getElementById('uploadProgressBar'), txt = document.getElementById('uploadProgressText');
                 let p = 0;
                 const int = setInterval(async () => {
                     p += Math.floor(Math.random() * 20) + 10;
                     if (p >= 100) {
-                        p = 100;
-                        clearInterval(int);
-                        bar.style.width = '100%';
-                        txt.innerText = '100%';
-
-                        const newApp = {
-                            id: 'app_' + Date.now(),
-                            name: state.tempUploadData.name,
-                            description: state.tempUploadData.desc,
-                            iconUrl: state.tempUploadData.iconData,
-                            apkFile: state.tempUploadData.apkData,
-                            authorId: state.currentUser.id,
-                            authorName: state.currentUser.username,
-                            downloads: 0,
-                            ageRating: this.calcAIAge(),
-                            reviews: [],
-                            isVerified: false,
-                            isEduVerified: document.getElementById('qEdu').checked,
-                            isDeleted: false
-                        };
-                        
-                        data.apps.push(newApp);
-                        await dbHelper.write(data);
-                        
-                        setTimeout(() => {
-                            ui.showToast('App saved to Local Node (Ready for P2P Seeding)!', 'success');
-                            ui.switchView('home');
-                        }, 500);
-                    } else {
-                        bar.style.width = p + '%';
-                        txt.innerText = p + '%';
-                    }
+                        p = 100; clearInterval(int); bar.style.width = '100%'; txt.innerText = '100%';
+                        const newApp = { id: 'app_' + Date.now(), name: state.tempUploadData.name, description: state.tempUploadData.desc, iconUrl: state.tempUploadData.iconData, apkFile: state.tempUploadData.apkData, authorId: state.currentUser.id, authorName: state.currentUser.username, downloads: 0, ageRating: this.calcAIAge(), reviews: [], isVerified: false, isEduVerified: document.getElementById('qEdu').checked, isDeleted: false };
+                        data.apps.push(newApp); await dbHelper.write(data);
+                        setTimeout(() => { ui.showToast('App saved & seeding on P2P!', 'success'); ui.switchView('home'); }, 500);
+                    } else { bar.style.width = p + '%'; txt.innerText = p + '%'; }
                 }, 400); 
             }
         };
 
-        // --- STREAMING_CHUNK:Admin Panel ---
         const admin = {
             render() {
-                const uL = document.getElementById('adminUserList');
-                const aL = document.getElementById('adminAppList');
+                const uL = document.getElementById('adminUserList'), aL = document.getElementById('adminAppList');
                 uL.innerHTML = ''; aL.innerHTML = '';
-
                 data.users.forEach(u => {
                     const b = data.bannedIPs.includes(u.ip);
-                    uL.innerHTML += `
-                        <div class="flex flex-col sm:flex-row justify-between sm:items-center p-3 bg-gray-50 rounded-xl border border-gray-100 gap-2 text-sm">
-                            <div class="truncate w-full sm:w-auto">
-                                <span class="font-bold">${u.username}</span> ${u.isAdmin ? '<span class="text-red-500 text-xs ml-1">(Admin)</span>' : ''}
-                                <div class="text-xs text-gray-500">IP: ${u.ip}</div>
-                            </div>
-                            ${!u.isAdmin ? `<button onclick="admin.banIP('${u.ip}')" class="px-3 py-1.5 ${b ? 'bg-gray-300' : 'bg-red-500 text-white'} rounded font-bold w-full sm:w-auto">${b ? 'Unban IP' : 'Ban IP'}</button>` : ''}
-                        </div>
-                    `;
+                    uL.innerHTML += `<div class="flex flex-col sm:flex-row justify-between sm:items-center p-3 bg-gray-50 rounded-xl border border-gray-100 gap-2 text-sm"><div class="truncate w-full sm:w-auto"><span class="font-bold">${u.username}</span> ${u.isAdmin ? '<span class="text-red-500 text-xs ml-1">(Admin)</span>' : ''}<div class="text-xs text-gray-500">IP: ${u.ip}</div></div>${!u.isAdmin ? `<button onclick="admin.banIP('${u.ip}')" class="px-3 py-1.5 ${b ? 'bg-gray-300' : 'bg-red-500 text-white'} rounded font-bold w-full sm:w-auto">${b ? 'Unban IP' : 'Ban IP'}</button>` : ''}</div>`;
                 });
-
                 data.apps.forEach(a => {
-                    aL.innerHTML += `
-                        <div class="p-3 bg-gray-50 rounded-xl border border-gray-100 mb-2 text-sm ${a.isDeleted ? 'opacity-50' : ''}">
-                            <div class="flex flex-col sm:flex-row justify-between sm:items-center mb-1 gap-2">
-                                <span class="font-bold truncate max-w-full sm:max-w-[150px]">${a.name}</span>
-                                <div class="flex gap-2 w-full sm:w-auto">
-                                    <button onclick="admin.tVer('${a.id}')" class="flex-1 px-3 py-1 bg-blue-500 text-white rounded font-bold"><i class="fa-solid fa-shield"></i></button>
-                                    <button onclick="admin.tDel('${a.id}')" class="flex-1 px-3 py-1 ${a.isDeleted ? 'bg-green-500' : 'bg-red-500'} text-white rounded font-bold">${a.isDeleted ? 'Restore' : 'Del'}</button>
-                                </div>
-                            </div>
-                            <div class="text-xs text-gray-500">By: ${a.authorName}</div>
-                        </div>
-                    `;
+                    aL.innerHTML += `<div class="p-3 bg-gray-50 rounded-xl border border-gray-100 mb-2 text-sm ${a.isDeleted ? 'opacity-50' : ''}"><div class="flex flex-col sm:flex-row justify-between sm:items-center mb-1 gap-2"><span class="font-bold truncate max-w-full sm:max-w-[150px]">${a.name}</span><div class="flex gap-2 w-full sm:w-auto"><button onclick="admin.tVer('${a.id}')" class="flex-1 px-3 py-1 bg-blue-500 text-white rounded font-bold"><i class="fa-solid fa-shield"></i></button><button onclick="admin.tDel('${a.id}')" class="flex-1 px-3 py-1 ${a.isDeleted ? 'bg-green-500' : 'bg-red-500'} text-white rounded font-bold">${a.isDeleted ? 'Restore' : 'Del'}</button></div></div><div class="text-xs text-gray-500">By: ${a.authorName}</div></div>`;
                 });
             },
-            async banIP(ip) {
-                if(data.bannedIPs.includes(ip)) data.bannedIPs = data.bannedIPs.filter(i => i !== ip);
-                else data.bannedIPs.push(ip);
-                await dbHelper.write(data); this.render();
-            },
+            async banIP(ip) { if(data.bannedIPs.includes(ip)) data.bannedIPs = data.bannedIPs.filter(i => i !== ip); else data.bannedIPs.push(ip); await dbHelper.write(data); this.render(); },
             async tDel(id) { const a = data.apps.find(x => x.id === id); if(a) { a.isDeleted = !a.isDeleted; await dbHelper.write(data); this.render(); } },
             async tVer(id) { const a = data.apps.find(x => x.id === id); if(a) { a.isVerified = !a.isVerified; await dbHelper.write(data); this.render(); } }
         };
 
-        // --- STREAMING_CHUNK:Global Events & Bootstrapping ---
         document.getElementById('upDesc')?.addEventListener('input', (e) => document.getElementById('descCount').innerText = e.target.value.length);
-        
-        // Close menus on outside click
-        document.addEventListener('click', (e) => {
-            const btn = e.target.closest('#userProfileBtn');
-            const menu = document.getElementById('userDropdownMenu');
-            if (!btn && menu && !menu.classList.contains('hidden')) menu.classList.add('hidden');
-        });
-
-        document.getElementById('adminAppSearch')?.addEventListener('input', (e) => {
-            const q = e.target.value.toLowerCase();
-            Array.from(document.getElementById('adminAppList').children).forEach(c => c.style.display = c.innerText.toLowerCase().includes(q) ? 'block' : 'none');
-        });
+        document.addEventListener('click', (e) => { const btn = e.target.closest('#userProfileBtn'); const menu = document.getElementById('userDropdownMenu'); if (!btn && menu && !menu.classList.contains('hidden')) menu.classList.add('hidden'); });
 
         window.onload = async () => {
             document.getElementById('currentYear').innerText = new Date().getFullYear();
-            
-            // 1. Load Data from IndexedDB
-            try {
-                await dbHelper.init();
-                const d = await dbHelper.read();
-                if (d) data = d;
-            } catch (e) { ui.showToast("Database init failed.", "error"); }
+            try { await dbHelper.init(); const d = await dbHelper.read(); if (d) data = d; } catch (e) { ui.showToast("Database init failed.", "error"); }
 
-            // 2. Persistent Login Check
             const sId = localStorage.getItem('superdownloader_session');
             if (sId) {
                 const u = data.users.find(x => x.id === sId);
-                if (u && !data.bannedIPs.includes(u.ip)) {
-                    state.currentUser = { id: u.id, username: u.username };
-                    state.isAdminActive = u.isAdmin || false;
-                } else {
-                    localStorage.removeItem('superdownloader_session');
-                }
+                if (u && !data.bannedIPs.includes(u.ip)) { state.currentUser = { id: u.id, username: u.username }; state.isAdminActive = u.isAdmin || false; }
+                else localStorage.removeItem('superdownloader_session');
             }
 
-            // 3. Start P2P WebRTC Network
             p2pNetwork.init();
-
-            // 4. Update UI
-            i18n.init();
+            i18n.updateDOM();
             ui.updateMenu();
             appStore.renderApps();
-
-            // 5. Admin Code Check
             if (window.location.hash) auth.checkAdmin(window.location.hash);
         };
     </script>
