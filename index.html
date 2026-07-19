@@ -3,1097 +3,1128 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>SuperDownloader - Decentralized Network</title>
-    
+    <title>Superdownloader</title>
     <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
-    
-    <!-- React & ReactDOM -->
-    <script src="https://unpkg.com/react@18/umd/react.production.min.js" crossorigin></script>
-    <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js" crossorigin></script>
-    <script src="https://unpkg.com/babel-standalone@6/babel.min.js"></script>
-
-    <!-- Public MQTT (WSS) Protocol -->
-    <script src="https://unpkg.com/mqtt/dist/mqtt.min.js"></script>
-    
-    <!-- WebTorrent -->
-    <script src="https://cdn.jsdelivr.net/npm/webtorrent@latest/webtorrent.min.js"></script>
-
-    <!-- LocalForage -->
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/localforage/1.10.0/localforage.min.js"></script>
-
+    <!-- FontAwesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
     <style>
-        body { background-color: #0f172a; color: #f8fafc; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
-        .glass-panel { background: rgba(30, 41, 59, 0.7); backdrop-filter: blur(10px); border: 1px solid rgba(255,255,255,0.1); }
-        .scrollbar-hide::-webkit-scrollbar { display: none; }
-        .scrollbar-hide { -ms-overflow-style: none; scrollbar-width: none; }
-        
-        .rank-tooltip { position: relative; display: inline-flex; align-items: center; cursor: help; }
-        .rank-tooltip .tooltip-text {
-            visibility: hidden; color: #fff; text-align: center;
-            border-radius: 6px; padding: 6px 12px; position: absolute; z-index: 50;
-            bottom: 125%; left: 50%; transform: translateX(-50%); opacity: 0;
-            transition: opacity 0.2s; white-space: nowrap; font-size: 0.75rem; font-weight: bold;
-            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.2); border: 1px solid rgba(255,255,255,0.1);
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #f8fafc;
+            color: #0f172a;
+            overflow-x: hidden;
         }
-        .rank-tooltip:hover .tooltip-text { visibility: visible; opacity: 1; }
+        
+        /* Custom Scrollbar for Play Store feel */
+        ::-webkit-scrollbar { width: 8px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 10px; }
+        ::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
+
+        .app-card {
+            transition: all 0.2s ease;
+        }
+        .app-card:hover {
+            transform: translateY(-4px);
+            box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.1);
+        }
+
+        /* Animations */
+        @keyframes slideInUp {
+            from { transform: translateY(20px); opacity: 0; }
+            to { transform: translateY(0); opacity: 1; }
+        }
+        .animate-slide-up { animation: slideInUp 0.3s ease forwards; }
+
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+        .animate-fade-in { animation: fadeIn 0.2s ease forwards; }
+
+        /* Loader */
+        .loader {
+            border: 3px solid #f3f3f3;
+            border-top: 3px solid #10b981;
+            border-radius: 50%;
+            width: 24px;
+            height: 24px;
+            animation: spin 1s linear infinite;
+        }
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
     </style>
 </head>
-<body>
-    <div id="root"></div>
+<body class="bg-gray-50 flex flex-col min-h-screen">
 
-    <script type="text/babel">
-        // =====================================================================
-        // GOOGLE GEMINI AI
-        const _KEY_PART_1 = "AQ.Ab8RN6KYuQgE_FBYs";
-        const _KEY_PART_2 = "b0mnT4xPrlbyvdYDiqGRDqalVOKoLbBsQ";
-        const GEMINI_API_KEY = _KEY_PART_1 + _KEY_PART_2;
-        // =====================================================================
-
-        const { useState, useEffect, useRef } = React;
-
-        const MQTT_BROKER = 'wss://broker.emqx.io:8084/mqtt';
-        const MESH_TOPIC = 'superdwn_net_v20_planexd_final'; 
-        const webtorrentClient = new WebTorrent();
-
-        const Icons = {
-            Download: () => <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path></svg>,
-            Upload: () => <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"></path></svg>,
-            Shield: () => <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M10 1.944A11.954 11.954 0 012.866 5C2.866 11.538 5.766 17.518 10 20c4.234-2.482 7.134-8.462 7.134-15A11.954 11.954 0 0110 1.944zM11 14a1 1 0 11-2 0 1 1 0 012 0zm0-7a1 1 0 10-2 0v3a1 1 0 102 0V7z" clipRule="evenodd"></path></svg>,
-            Crown: () => <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24"><path d="M12 2l3 7h7l-5.5 4.5 2 7.5-6.5-4.5-6.5 4.5 2-7.5-5.5-4.5h7z"></path></svg>,
-            Search: () => <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path></svg>,
-            User: () => <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"></path></svg>,
-            Alert: () => <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path></svg>,
-            Trash: () => <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg>,
-            Ban: () => <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636"></path></svg>,
-            Chat: () => <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z"></path></svg>,
-            Back: () => <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"></path></svg>,
-            Google: () => <svg className="w-5 h-5" viewBox="0 0 24 24" fill="currentColor"><path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4"/><path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/><path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" fill="#FBBC05"/><path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335"/></svg>,
-            Dashboard: () => <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z"></path></svg>,
-            Edit: () => <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path></svg>,
-            Heart: ({ filled }) => <svg className="w-5 h-5" fill={filled ? "currentColor" : "none"} stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z"></path></svg>
-        };
-
-        const CATEGORIES = ['.exe', '.js', '.json', '.html', '.py', '.pyw', 'Video/Audio', 'Other'];
-
-        const generateId = () => Math.random().toString(36).substr(2, 6);
-        const formatBytes = (bytes, decimals = 2) => {
-            if (!+bytes) return '0 Bytes';
-            const k = 1024; const dm = decimals < 0 ? 0 : decimals;
-            const sizes = ['Bytes', 'KB', 'MB', 'GB', 'TB'];
-            const i = Math.floor(Math.log(bytes) / Math.log(k));
-            return `${parseFloat((bytes / Math.pow(k, i)).toFixed(dm))} ${sizes[i]}`;
-        };
-
-        const UserBadge = ({ nick, usersList, onClick }) => {
-            const u = usersList[nick];
-            if (!u) return (
-                <span className="text-red-300 text-[10px] font-black bg-red-900/40 px-2 py-0.5 rounded border border-red-500/50 inline-flex items-center gap-1 uppercase tracking-wider" title="Account deleted">
-                    <Icons.Alert /> User can't be loaded
-                </span>
-            );
-            
-            let badgeClass = "text-gray-300 font-medium hover:text-white cursor-pointer";
-            let content = nick;
-
-            if (u.role === 'owner') {
-                badgeClass = "rank-tooltip group inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-lg bg-gradient-to-r from-amber-500/20 to-yellow-600/20 border border-yellow-500/40 shadow-[0_0_15px_rgba(234,179,8,0.25)] cursor-pointer hover:scale-105 transition";
-                content = (
-                    <React.Fragment>
-                        <Icons.Crown />
-                        <span className="font-black text-transparent bg-clip-text bg-gradient-to-r from-yellow-300 via-amber-200 to-yellow-500 tracking-wide drop-shadow-sm">{nick}</span>
-                        <span className="tooltip-text text-yellow-100 border-yellow-500/50 bg-slate-900/95 backdrop-blur-md">Owner Of Superdownloader</span>
-                    </React.Fragment>
-                );
-            } else if (u.role === 'admin') {
-                badgeClass = "rank-tooltip group inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-lg bg-gradient-to-r from-blue-500/20 to-indigo-600/20 border border-blue-500/40 shadow-[0_0_15px_rgba(59,130,246,0.25)] cursor-pointer hover:scale-105 transition";
-                content = (
-                    <React.Fragment>
-                        <Icons.Shield />
-                        <span className="font-bold text-transparent bg-clip-text bg-gradient-to-r from-blue-300 to-indigo-300 tracking-wide drop-shadow-sm">{nick}</span>
-                        <span className="tooltip-text text-blue-100 border-blue-500/50 bg-slate-900/95 backdrop-blur-md">Admin Of superdownloader</span>
-                    </React.Fragment>
-                );
-            }
-
-            return <span className={badgeClass} onClick={(e) => { e.stopPropagation(); if(onClick) onClick(nick); }}>{content}</span>;
-        };
-
-        const AuthView = ({ usersList, setUser, setView, showMessage, updateDatabase }) => {
-            const [isLogin, setIsLogin] = useState(true);
-            const [nick, setNick] = useState('');
-            const [pass, setPass] = useState('');
-            const [authStep, setAuthStep] = useState(0); // 0 = standard, 1 = wait for email, 2 = enter code
-            const [googleEmail, setGoogleEmail] = useState('');
-            const [generatedCode, setGeneratedCode] = useState('');
-            const [inputCode, setInputCode] = useState('');
-
-            const loginDirectly = (userData, method) => {
-                setUser(userData);
-                localStorage.setItem('dwn_user_auth', JSON.stringify(userData));
-                setView('home');
-                showMessage(`Welcome back via ${method}, ${userData.nick}!`, "success");
-            };
-
-            const handleSubmit = (e) => {
-                e.preventDefault();
-                if(!navigator.onLine) return showMessage("Internet required for authentication!", "error");
+    <nav class="bg-white shadow-sm border-b border-gray-100 sticky top-0 z-40">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex justify-between h-16 items-center">
                 
-                // FORCE FRESH READ FROM DISK (Fixes the login bug!)
-                const currentDb = JSON.parse(localStorage.getItem('superdwn_netdb') || '{"users":{}}');
-                const freshUsersList = currentDb.users || {};
-                const existingUser = freshUsersList[nick];
-
-                if (isLogin) {
-                    if (!existingUser) {
-                        showMessage("User not found or account deleted!", "error");
-                    } else if (existingUser.pass !== pass) {
-                        showMessage("Invalid password", "error");
-                    } else {
-                        loginDirectly({ nick: existingUser.nick, role: existingUser.role || 'user' }, 'Password');
-                    }
-                } else {
-                    if (existingUser) {
-                        showMessage("Username already taken in the network!", "error");
-                    } else {
-                        const newUser = { nick, pass, role: 'user', isBanned: false, createdAt: Date.now() };
-                        updateDatabase('users', nick, newUser);
-                        loginDirectly({ nick, role: 'user' }, 'Registration');
-                    }
-                }
-            };
-
-            const handleGoogleAuthStart = () => {
-                if(!navigator.onLine) return showMessage("Internet required!", "error");
-                const email = prompt("Enter your Gmail to receive a 6-digit confirmation code:");
-                if(!email || !email.includes('@')) return showMessage("Invalid email format", "error");
-                
-                setGoogleEmail(email);
-                const code = Math.floor(100000 + Math.random() * 900000).toString();
-                setGeneratedCode(code);
-                setAuthStep(1);
-
-                // Simulate Email Sending via Alert (Since no backend exists for GitHub Pages)
-                setTimeout(() => {
-                    alert(`[GMAIL SIMULATION]\nFrom: auth@superdownloader.net\nTo: ${email}\n\nYour Google Verification Code is: ${code}\n\n(This is a secure simulation because a true email requires a paid backend server).`);
-                    setAuthStep(2);
-                }, 1500);
-            };
-
-            const verifyGoogleCode = (e) => {
-                e.preventDefault();
-                if(inputCode !== generatedCode) return showMessage("Invalid Code!", "error");
-                
-                const generatedNick = googleEmail.split('@')[0].replace(/[^a-zA-Z0-9_]/g, '');
-                const currentDb = JSON.parse(localStorage.getItem('superdwn_netdb') || '{"users":{}}');
-                const existingUser = (currentDb.users || {})[generatedNick];
-
-                if (existingUser) {
-                    loginDirectly({ nick: existingUser.nick, role: existingUser.role || 'user' }, 'Google');
-                } else {
-                    const securePass = "gauth_" + Math.random().toString(36).substr(2);
-                    const newUser = { nick: generatedNick, pass: securePass, role: 'user', isBanned: false, createdAt: Date.now() };
-                    updateDatabase('users', generatedNick, newUser);
-                    loginDirectly({ nick: generatedNick, role: 'user' }, 'Google');
-                }
-            };
-
-            if (authStep > 0) {
-                return (
-                    <div className="flex justify-center items-center h-full mt-20">
-                        <div className="glass-panel p-8 rounded-xl w-full max-w-md shadow-2xl text-center">
-                            <Icons.Shield className="w-12 h-12 mx-auto text-blue-400 mb-4" />
-                            <h2 className="text-2xl font-black mb-2">Two-Factor Authentication</h2>
-                            {authStep === 1 ? (
-                                <p className="text-gray-400 mb-6">Sending 6-digit code to <b className="text-white">{googleEmail}</b>...</p>
-                            ) : (
-                                <form onSubmit={verifyGoogleCode} className="space-y-4">
-                                    <p className="text-gray-400 mb-4">Enter the 6-digit code sent to your email.</p>
-                                    <input autoFocus required type="text" maxLength="6" value={inputCode} onChange={e => setInputCode(e.target.value.replace(/\D/g, ''))} className="w-full bg-slate-900 border border-slate-700 rounded-xl p-4 text-white text-center text-2xl tracking-widest outline-none focus:border-blue-500 transition-all shadow-inner" placeholder="000000" />
-                                    <button type="submit" className="w-full bg-blue-600 hover:bg-blue-500 transition-all rounded-xl p-4 font-bold text-lg shadow-lg">Verify</button>
-                                    <button type="button" onClick={() => setAuthStep(0)} className="w-full bg-transparent border border-slate-700 hover:bg-slate-800 transition-all rounded-xl p-3 font-bold text-gray-400">Cancel</button>
-                                </form>
-                            )}
-                        </div>
+                <!-- Logo -->
+                <div class="flex items-center cursor-pointer" onclick="ui.switchView('home')">
+                    <div class="w-10 h-10 bg-gradient-to-br from-emerald-400 to-emerald-600 rounded-xl flex items-center justify-center shadow-lg transform rotate-3">
+                        <i class="fa-solid fa-download text-white text-xl -rotate-3"></i>
                     </div>
-                );
-            }
+                    <span class="ml-3 font-extrabold text-xl tracking-tight bg-clip-text text-transparent bg-gradient-to-r from-emerald-600 to-teal-700">
+                        Superdownloader
+                    </span>
+                </div>
 
-            return (
-                <div className="flex justify-center items-center h-full mt-20">
-                    <div className="glass-panel p-8 rounded-xl w-full max-w-md shadow-2xl">
-                        <h2 className="text-3xl font-black mb-8 text-center bg-clip-text text-transparent bg-gradient-to-r from-blue-400 to-indigo-300">{isLogin ? 'Welcome Back' : 'Join Network'}</h2>
-                        <form onSubmit={handleSubmit} className="space-y-5">
-                            <div>
-                                <label className="block text-sm text-gray-400 mb-1 font-medium">Username</label>
-                                <input required type="text" name="username" autoComplete="username" value={nick} onChange={e => setNick(e.target.value.replace(/[^a-zA-Z0-9_]/g, ''))} className="w-full bg-slate-900 border border-slate-700 rounded-xl p-4 text-white outline-none focus:border-blue-500 transition-all shadow-inner" placeholder="e.g., planexd_0" />
-                            </div>
-                            <div>
-                                <label className="block text-sm text-gray-400 mb-1 font-medium">Password</label>
-                                <input required type="password" name="password" autoComplete={isLogin ? "current-password" : "new-password"} value={pass} onChange={e => setPass(e.target.value)} className="w-full bg-slate-900 border border-slate-700 rounded-xl p-4 text-white outline-none focus:border-blue-500 transition-all shadow-inner" placeholder="••••••••" />
-                            </div>
-                            <button type="submit" className="w-full bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 transition-all rounded-xl p-4 font-bold text-lg shadow-lg hover:shadow-blue-500/25 active:scale-[0.98]">
-                                {isLogin ? 'Sign In' : 'Create Account'}
-                            </button>
-                        </form>
-
-                        <div className="mt-8">
-                            <div className="relative">
-                                <div className="absolute inset-0 flex items-center"><div className="w-full border-t border-slate-700"></div></div>
-                                <div className="relative flex justify-center text-sm"><span className="px-2 bg-slate-900 text-gray-500 font-bold uppercase tracking-wider">Or continue with</span></div>
-                            </div>
-                            <div className="mt-6">
-                                <button onClick={handleGoogleAuthStart} className="w-full flex items-center justify-center gap-3 bg-slate-800 hover:bg-slate-700 border border-slate-700 transition-all rounded-xl p-3 text-white font-medium shadow-inner hover:shadow-lg hover:border-slate-500 active:scale-95">
-                                    <Icons.Google /> Secure Google Login (2FA)
-                                </button>
-                            </div>
+                <!-- Search Bar -->
+                <div class="flex-1 max-w-2xl px-8 hidden md:block">
+                    <div class="relative">
+                        <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                            <i class="fa-solid fa-magnifying-glass text-gray-400"></i>
                         </div>
-
-                        <div className="mt-6 text-center">
-                            <span className="text-sm text-gray-400 cursor-pointer hover:text-white transition-colors border-b border-transparent hover:border-white pb-1" onClick={() => setIsLogin(!isLogin)}>
-                                {isLogin ? "Don't have an account? Register." : 'Already have an account? Login.'}
-                            </span>
-                        </div>
+                        <input type="text" id="searchInput" placeholder="Search apps & games..." class="block w-full pl-10 pr-3 py-2 border border-gray-200 rounded-full leading-5 bg-gray-50 placeholder-gray-500 focus:outline-none focus:bg-white focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 sm:text-sm transition-all" onkeypress="if(event.key === 'Enter') ui.searchApps()">
                     </div>
                 </div>
-            );
-        };
 
-        const UploadView = ({ user, updateDatabase, showMessage, setView }) => {
-            const [name, setName] = useState('');
-            const [desc, setDesc] = useState('');
-            const [imgUrl, setImgUrl] = useState('');
-            const [category, setCategory] = useState(CATEGORIES[0]);
-            const [file, setFile] = useState(null);
-            const [scanning, setScanning] = useState(false);
-            const [scanResult, setScanResult] = useState(null);
-
-            const handleFileChange = (e) => {
-                const selected = e.target.files[0];
-                if(selected) {
-                    setFile(selected);
-                    setScanResult(null);
-                    if(!name) setName(selected.name);
-                }
-            };
-
-            const handleImageChange = (e) => {
-                const selectedImg = e.target.files[0];
-                if (selectedImg) {
-                    if (selectedImg.size > 100 * 1024) { 
-                        showMessage("Image is too large (max 100 KB)!", "error");
-                        e.target.value = null; 
-                        setImgUrl('');
-                        return;
-                    }
-                    const reader = new FileReader();
-                    reader.onload = (ev) => setImgUrl(ev.target.result);
-                    reader.readAsDataURL(selectedImg);
-                } else {
-                    setImgUrl('');
-                }
-            };
-
-            const performAntivirusScan = async (fileObj, fileDesc) => {
-                setScanning(true);
-                const offlineFallbackScan = async () => {
-                    await new Promise(r => setTimeout(r, 1000));
-                    const maliciousKeywords = ['trojan', 'hack', 'stealer', 'virus', 'malware'];
-                    const isMalicious = maliciousKeywords.some(w => fileObj.name.toLowerCase().includes(w));
-                    setScanning(false);
-                    if (isMalicious) {
-                        setScanResult({ safe: false, msg: 'Threat detected (Offline Backup Heuristics)!' });
-                        return false;
-                    }
-                    setScanResult({ safe: true, msg: 'File is clean. (Offline Backup Scan)' });
-                    return true;
-                };
-
-                if (!GEMINI_API_KEY || GEMINI_API_KEY === "TUTAJ_WKLEJ_SWOJ_KLUCZ_API") return await offlineFallbackScan();
-
-                try {
-                    let fileContentSnippet = "Not analyzed (binary, large file, or empty).";
-                    const textExtensions = ['.js', '.py', '.html', '.json', '.txt', '.bat', '.cmd', '.pyw', '.sh'];
-                    const isText = textExtensions.some(ext => fileObj.name.toLowerCase().endsWith(ext));
+                <!-- Right Menu -->
+                <div class="flex items-center gap-4">
+                    <!-- Upload Button -->
+                    <button onclick="ui.goToUpload()" class="hidden sm:flex items-center gap-2 text-gray-500 hover:text-emerald-600 font-medium transition-colors">
+                        <i class="fa-solid fa-cloud-arrow-up"></i>
+                        <span id="nav_upload">Upload</span>
+                    </button>
                     
-                    if (isText && fileObj.size > 0 && fileObj.size < 100 * 1024) { 
-                        const reader = new FileReader();
-                        fileContentSnippet = await new Promise(resolve => {
-                            reader.onload = e => resolve(e.target.result.substring(0, 15000)); 
-                            reader.onerror = () => resolve("Could not read file.");
-                            reader.readAsText(fileObj);
-                        });
-                    }
+                    <!-- User Menu Container -->
+                    <div id="userMenuContainer" class="relative ml-2">
+                        <!-- Populated by JS -->
+                    </div>
+                </div>
+            </div>
+        </div>
+    </nav>
 
-                    const promptText = `As an expert cybersecurity analyst, analyze this file.
-                    File Name: "${fileObj.name}"
-                    Size: ${fileObj.size} bytes
-                    Description: "${fileDesc || 'No description'}"
-                    Code Snippet: """${fileContentSnippet}"""
+    <main class="flex-1 max-w-7xl mx-auto w-full px-4 sm:px-6 lg:px-8 py-8 relative">
+        
+        <!-- VIEW: HOME -->
+        <div id="view-home" class="view-section block animate-fade-in">
+            <h2 class="text-2xl font-bold text-gray-900 mb-6" id="home_rec">Recommended for you</h2>
+            <div id="recommendedAppsGrid" class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-4 sm:gap-6">
+                <!-- Apps loaded here -->
+            </div>
 
-                    CRITICAL RULES:
-                    1. DEFAULT TO SAFE. If the file is empty, unknown, a simple game, or a normal script, it is SAFE.
-                    2. ONLY flag as unsafe (safe: false) if the code snippet clearly shows malicious intent (stealing tokens, destroying OS, malicious payloads) or if it's a known dangerous binary pattern.
-                    3. DO NOT flag just because the name contains 'hack', 'cheat', or is missing an extension.
-                    
-                    Respond ONLY in valid JSON format:
-                    {"safe": true, "msg": "Short reason in English"}`;
+            <div class="mt-12 flex items-center justify-between mb-6">
+                <h2 class="text-2xl font-bold text-gray-900"><span id="home_hits">Hits</span> <span id="currentYear"></span></h2>
+            </div>
+            <div id="hitsAppsGrid" class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-6">
+                <!-- Hits loaded here -->
+            </div>
+        </div>
 
-                    const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${GEMINI_API_KEY}`, {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ 
-                            contents: [{ parts: [{ text: promptText }] }],
-                            generationConfig: { responseMimeType: "application/json" }
-                        })
-                    });
+        <!-- VIEW: APP DETAILS -->
+        <div id="view-app" class="view-section hidden animate-fade-in">
+            <!-- Populated by JS -->
+        </div>
 
-                    if (!response.ok) throw new Error(`API HTTP Error`);
-
-                    const data = await response.json();
-                    const aiResult = JSON.parse(data.candidates[0].content.parts[0].text);
-
-                    setScanning(false);
-                    setScanResult({ safe: aiResult.safe, msg: aiResult.msg + ' (Scanned by Gemini AI)' });
-                    return aiResult.safe;
-
-                } catch (error) {
-                    console.warn("AI Server Error. Falling back to offline scanner:", error);
-                    return await offlineFallbackScan();
-                }
-            };
-
-            const handleUpload = async (e) => {
-                e.preventDefault();
-                if(!navigator.onLine) return showMessage("No internet connection!", "error");
-                if (!file) return showMessage("Select a file!", "error");
+        <!-- VIEW: UPLOAD -->
+        <div id="view-upload" class="view-section hidden animate-fade-in max-w-3xl mx-auto">
+            <div class="bg-white rounded-2xl shadow-sm border border-gray-100 p-8">
+                <h2 class="text-3xl font-bold mb-2">Publish App via P2P</h2>
+                <p class="text-gray-500 mb-8">Share your application with the world securely.</p>
                 
-                const isSafe = await performAntivirusScan(file, desc);
-                if (!isSafe) return showMessage("Blocked by Antivirus AI!", "error");
+                <!-- Upload Steps UI -->
+                <div id="uploadStep1">
+                    <div class="space-y-6">
+                        <div>
+                            <label class="block text-sm font-semibold text-gray-700 mb-1">App Name</label>
+                            <input type="text" id="upName" class="w-full px-4 py-3 rounded-xl border border-gray-200 focus:ring-2 focus:ring-emerald-500 outline-none" placeholder="e.g. Flappy Bird">
+                        </div>
+                        <div>
+                            <label class="block text-sm font-semibold text-gray-700 mb-1">Description (<span id="descCount">0</span>/95)</label>
+                            <textarea id="upDesc" maxlength="95" rows="2" class="w-full px-4 py-3 rounded-xl border border-gray-200 focus:ring-2 focus:ring-emerald-500 outline-none resize-none" placeholder="Short and catchy description..."></textarea>
+                        </div>
+                        <div>
+                            <label class="block text-sm font-semibold text-gray-700 mb-1">App Icon (Image)</label>
+                            <input type="file" id="upIcon" accept="image/png, image/jpeg" class="w-full text-sm text-gray-500 file:mr-4 file:py-3 file:px-4 file:rounded-xl file:border-0 file:text-sm file:font-semibold file:bg-emerald-50 file:text-emerald-700 hover:file:bg-emerald-100 transition-all border border-gray-200 rounded-xl">
+                        </div>
+                        <div>
+                            <label class="block text-sm font-semibold text-gray-700 mb-1">Application File (ONLY .APK)</label>
+                            <input type="file" id="upApk" accept=".apk" class="w-full text-sm text-gray-500 file:mr-4 file:py-3 file:px-4 file:rounded-xl file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100 transition-all border border-gray-200 rounded-xl">
+                        </div>
+                        <button onclick="appStore.nextUploadStep(2)" class="w-full bg-gray-900 text-white font-bold py-3 rounded-xl shadow-md hover:bg-gray-800 transition-colors mt-4">Next Step</button>
+                    </div>
+                </div>
 
-                const fileId = generateId();
-                const metadata = {
-                    id: fileId, name, desc, img: imgUrl, category,
-                    uploader: user.nick, timestamp: Date.now(),
-                    size: file.size, fileName: file.name,
-                    downloads: 0, likes: []
-                };
+                <div id="uploadStep2" class="hidden">
+                    <h3 class="text-xl font-bold mb-4">Age Rating Form (AI Powered)</h3>
+                    <div class="space-y-4 mb-6 bg-gray-50 p-6 rounded-xl border border-gray-100">
+                        <label class="flex items-center gap-3"><input type="checkbox" id="qEdu" class="w-5 h-5 text-emerald-600 rounded"> <span>Educational Application</span></label>
+                        <label class="flex items-center gap-3"><input type="checkbox" id="qOnline" class="w-5 h-5 text-emerald-600 rounded"> <span>Online Interactions (Chat/Multiplayer)</span></label>
+                        <label class="flex items-center gap-3"><input type="checkbox" id="qBlood" class="w-5 h-5 text-emerald-600 rounded"> <span>Contains Blood or Gore</span></label>
+                        <label class="flex items-center gap-3"><input type="checkbox" id="qViolence" class="w-5 h-5 text-emerald-600 rounded"> <span>Contains Violence</span></label>
+                        <label class="flex items-center gap-3"><input type="checkbox" id="qFear" class="w-5 h-5 text-emerald-600 rounded"> <span>Contains Frightening Elements</span></label>
+                        <label class="flex items-center gap-3"><input type="checkbox" id="qSwear" class="w-5 h-5 text-emerald-600 rounded"> <span>Bad Language / Swearing</span></label>
+                        <label class="flex items-center gap-3"><input type="checkbox" id="qSexMild" class="w-5 h-5 text-emerald-600 rounded"> <span>Mild Suggestive Themes</span></label>
+                        <label class="flex items-center gap-3"><input type="checkbox" id="qSexExplicit" class="w-5 h-5 text-emerald-600 rounded"> <span>Explicit Content (Adults only)</span></label>
+                        <label class="flex items-center gap-3"><input type="checkbox" id="qGambling" class="w-5 h-5 text-emerald-600 rounded"> <span>Simulated Gambling</span></label>
+                        <label class="flex items-center gap-3"><input type="checkbox" id="qDrugs" class="w-5 h-5 text-emerald-600 rounded"> <span>Reference to Drugs/Alcohol</span></label>
+                    </div>
 
-                showMessage("Uploading to network...", "info");
+                    <h3 class="text-xl font-bold mb-4">2-Step Verification</h3>
+                    <div class="space-y-3 mb-8">
+                        <label class="flex items-center gap-3 bg-white p-4 border rounded-xl cursor-pointer hover:bg-gray-50">
+                            <input type="checkbox" id="vBot" class="w-5 h-5 text-emerald-600 rounded">
+                            <span class="font-medium text-gray-700">I am not a robot</span>
+                        </label>
+                        <label class="flex items-start gap-3 bg-white p-4 border rounded-xl cursor-pointer hover:bg-gray-50">
+                            <input type="checkbox" id="vTos" class="w-6 h-6 text-emerald-600 rounded mt-1">
+                            <span class="text-sm text-gray-600 leading-relaxed">I agree to the Terms of Service. I understand that uploading viruses or malicious files will result in a permanent ban on all my accounts and IP address.</span>
+                        </label>
+                    </div>
 
-                if (file.size < 50 * 1024) {
-                    const reader = new FileReader();
-                    reader.onload = (ev) => {
-                        updateDatabase('files', fileId, { ...metadata, dataUrl: ev.target.result, isDirectLink: false });
-                        showMessage("Saved permanently!", "success");
-                        window.location.hash = `#/file/${fileId}`;
+                    <div class="flex gap-3 pt-4 border-t">
+                        <button onclick="appStore.prevUploadStep()" class="px-6 py-3 bg-gray-100 text-gray-700 font-bold rounded-xl hover:bg-gray-200">Back</button>
+                        <button onclick="appStore.startUploadProcess()" id="btnSubmitApp" class="flex-1 bg-emerald-600 text-white font-bold py-3 rounded-xl shadow-md hover:bg-emerald-700 transition-colors">Publish App via P2P</button>
+                    </div>
+                </div>
+
+                <div id="uploadStep3" class="hidden text-center py-12">
+                    <div class="w-20 h-20 mx-auto border-4 border-gray-100 border-t-emerald-500 rounded-full animate-spin mb-6"></div>
+                    <h2 class="text-2xl font-bold mb-2">Connecting to P2P Network...</h2>
+                    <p class="text-gray-500 mb-4">Uploading files to the decentralized network.</p>
+                    <div class="w-full bg-gray-200 rounded-full h-4 mb-2 overflow-hidden">
+                        <div id="uploadProgressBar" class="bg-emerald-500 h-4 rounded-full transition-all duration-300" style="width: 0%"></div>
+                    </div>
+                    <p id="uploadProgressText" class="font-bold text-emerald-600">0%</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- VIEW: SETTINGS -->
+        <div id="view-settings" class="view-section hidden animate-fade-in max-w-2xl mx-auto">
+            <h2 class="text-3xl font-bold mb-8" id="settings_title">Account Settings</h2>
+            
+            <div class="bg-white rounded-2xl shadow-sm border border-gray-100 p-8 mb-6">
+                <div class="mb-6">
+                    <label class="block text-sm font-bold text-gray-700 mb-2" id="set_lang">Language</label>
+                    <select id="langSelect" onchange="i18n.setLang(this.value)" class="w-full px-4 py-3 rounded-xl border border-gray-200 focus:ring-2 focus:ring-emerald-500 outline-none">
+                        <option value="en">English (US)</option>
+                        <option value="pl">Polski (PL)</option>
+                        <option value="es">Español (ES)</option>
+                        <option value="de">Deutsch (DE)</option>
+                    </select>
+                </div>
+
+                <hr class="my-6 border-gray-100">
+
+                <div class="mb-6">
+                    <label class="block text-sm font-bold text-gray-700 mb-2" id="set_user">Change Username</label>
+                    <div class="flex gap-2">
+                        <input type="text" id="setNewUsername" class="flex-1 px-4 py-2 rounded-xl border border-gray-200 focus:ring-2 focus:ring-emerald-500 outline-none" placeholder="New username">
+                        <button onclick="auth.changeUsername()" id="btnUpdateUser" class="bg-gray-900 text-white px-6 py-2 rounded-xl font-bold hover:bg-gray-800">Update</button>
+                    </div>
+                </div>
+
+                <div>
+                    <label class="block text-sm font-bold text-gray-700 mb-2" id="set_pass">Change Password</label>
+                    <div class="flex gap-2 mb-2">
+                        <input type="password" id="setOldPass" class="flex-1 px-4 py-2 rounded-xl border border-gray-200 focus:ring-2 focus:ring-emerald-500 outline-none" placeholder="Current password">
+                    </div>
+                    <div class="flex gap-2">
+                        <input type="password" id="setNewPass" class="flex-1 px-4 py-2 rounded-xl border border-gray-200 focus:ring-2 focus:ring-emerald-500 outline-none" placeholder="New password">
+                        <button onclick="auth.changePassword()" id="btnUpdatePass" class="bg-gray-900 text-white px-6 py-2 rounded-xl font-bold hover:bg-gray-800">Update</button>
+                    </div>
+                </div>
+            </div>
+
+            <div class="bg-red-50 rounded-2xl border border-red-100 p-8">
+                <h3 class="text-red-700 font-bold text-xl mb-2">Danger Zone</h3>
+                <p class="text-red-500 text-sm mb-4">Once you delete your account, there is no going back. Please be certain.</p>
+                <button onclick="auth.deleteAccount()" class="bg-red-600 text-white px-6 py-3 rounded-xl font-bold hover:bg-red-700 transition-colors shadow-md">Delete Account Permanently</button>
+            </div>
+        </div>
+
+        <!-- VIEW: ADMIN PANEL -->
+        <div id="view-admin" class="view-section hidden animate-fade-in max-w-5xl mx-auto">
+            <div class="flex justify-between items-center mb-8">
+                <h2 class="text-3xl font-bold text-red-600"><i class="fa-solid fa-shield-halved mr-2"></i>Admin Panel</h2>
+                <span class="bg-red-100 text-red-700 px-3 py-1 rounded-full text-sm font-bold">God Mode Active</span>
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
+                <!-- Manage Users -->
+                <div class="bg-white rounded-2xl shadow-sm border border-gray-100 p-6">
+                    <h3 class="font-bold text-xl mb-4 border-b pb-2">Manage Users</h3>
+                    <div id="adminUserList" class="space-y-3 max-h-96 overflow-y-auto pr-2">
+                        <!-- Users loaded here -->
+                    </div>
+                </div>
+
+                <!-- Manage Apps -->
+                <div class="bg-white rounded-2xl shadow-sm border border-gray-100 p-6">
+                    <h3 class="font-bold text-xl mb-4 border-b pb-2">Manage Apps</h3>
+                    <div class="flex gap-2 mb-4">
+                        <input type="text" id="adminAppSearch" placeholder="Search by name or ID..." class="flex-1 px-4 py-2 rounded-xl border border-gray-200 outline-none text-sm">
+                    </div>
+                    <div id="adminAppList" class="space-y-3 max-h-80 overflow-y-auto pr-2">
+                        <!-- Apps loaded here -->
+                    </div>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <!-- Authentication Modal -->
+    <div id="authModal" class="fixed inset-0 bg-gray-900 bg-opacity-50 backdrop-blur-sm hidden items-center justify-center z-50 transition-opacity">
+        <div class="bg-white rounded-3xl shadow-2xl w-full max-w-md p-8 transform transition-transform scale-95 opacity-0" id="authModalContent">
+            <div class="flex justify-between items-center mb-6">
+                <h3 class="text-2xl font-bold text-gray-900" id="authTitle">Sign In</h3>
+                <button onclick="ui.closeModal('authModal')" class="text-gray-400 hover:text-gray-600 w-8 h-8 flex items-center justify-center rounded-full hover:bg-gray-100 transition-colors">
+                    <i class="fa-solid fa-xmark text-xl"></i>
+                </button>
+            </div>
+            
+            <div class="space-y-4">
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Username</label>
+                    <input type="text" id="authUsername" class="w-full px-4 py-3 rounded-xl border border-gray-200 focus:ring-2 focus:ring-emerald-500 outline-none transition-all" placeholder="Enter your username">
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Password</label>
+                    <input type="password" id="authPassword" class="w-full px-4 py-3 rounded-xl border border-gray-200 focus:ring-2 focus:ring-emerald-500 outline-none transition-all" placeholder="••••••••">
+                </div>
+                
+                <button onclick="auth.handleAuthSubmit()" id="authSubmitBtn" class="w-full bg-emerald-600 text-white font-bold py-3 rounded-xl shadow-md hover:bg-emerald-700 transition-colors mt-2">Sign In</button>
+                
+                <div class="text-center mt-4">
+                    <p class="text-sm text-gray-500">
+                        <span id="authToggleText">Don't have an account?</span> 
+                        <button onclick="auth.toggleAuthMode()" class="text-emerald-600 font-bold hover:underline ml-1" id="authToggleBtn">Register</button>
+                    </p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Toast Notification Container -->
+    <div id="toastContainer" class="fixed bottom-4 right-4 z-50 flex flex-col gap-2"></div>
+
+    <script>
+        // --- 1. IndexedDB Wrapper (No limit local storage) ---
+        const dbHelper = {
+            db: null,
+            async init() {
+                return new Promise((resolve, reject) => {
+                    const request = indexedDB.open('SuperdownloaderDB', 1);
+                    request.onupgradeneeded = (event) => {
+                        const db = event.target.result;
+                        if (!db.objectStoreNames.contains('data')) {
+                            db.createObjectStore('data');
+                        }
                     };
-                    reader.readAsDataURL(file);
-                } else {
-                    localforage.setItem(`seed_${fileId}`, file);
-                    webtorrentClient.seed(file, (torrent) => {
-                        updateDatabase('files', fileId, { ...metadata, magnet: torrent.magnetURI, isDirectLink: true });
-                        showMessage("Added! You are now directly seeding this file.", "success");
-                        window.location.hash = `#/file/${fileId}`;
-                    });
-                }
-            };
-
-            return (
-                <div className="max-w-2xl mx-auto mt-10 p-8 glass-panel rounded-xl">
-                    <h2 className="text-2xl font-bold mb-6 flex items-center gap-2"><Icons.Upload /> Upload File</h2>
-                    <form onSubmit={handleUpload} className="space-y-5">
-                        <div>
-                            <label className="block text-sm text-gray-400 mb-1">Name (Required)</label>
-                            <input required type="text" value={name} onChange={e=>setName(e.target.value)} className="w-full bg-slate-800 border border-slate-700 rounded-lg p-3 text-white outline-none" />
-                        </div>
-                        <div className="grid grid-cols-2 gap-4">
-                            <div>
-                                <label className="block text-sm text-gray-400 mb-1">Category</label>
-                                <select value={category} onChange={e=>setCategory(e.target.value)} className="w-full bg-slate-800 border border-slate-700 rounded-lg p-3 text-white outline-none">
-                                    {CATEGORIES.map(c => <option key={c} value={c}>{c}</option>)}
-                                </select>
-                            </div>
-                            <div>
-                                <label className="block text-sm text-gray-400 mb-1">Cover Image (Max 100 KB)</label>
-                                <input type="file" accept="image/*" onChange={handleImageChange} className="w-full bg-slate-800 border border-slate-700 rounded-lg p-2 text-white outline-none" />
-                            </div>
-                        </div>
-                        <div>
-                            <label className="block text-sm text-gray-400 mb-1">Description (Optional)</label>
-                            <textarea value={desc} onChange={e=>setDesc(e.target.value)} className="w-full bg-slate-800 border border-slate-700 rounded-lg p-3 text-white outline-none h-24" />
-                        </div>
-                        <div>
-                            <label className="block text-sm text-gray-400 mb-1">File to upload</label>
-                            <input required type="file" onChange={handleFileChange} className="w-full bg-slate-800 border border-slate-700 rounded-lg p-2 text-white outline-none" />
-                            {file && <p className="text-sm mt-1 text-gray-400">Size: {formatBytes(file.size)}</p>}
-                        </div>
-
-                        {scanning && (
-                            <div className="flex items-center gap-2 text-yellow-400 bg-yellow-400/10 p-3 rounded-lg">
-                                <Icons.Shield /> <span>Deep Code Scanning via AI...</span>
-                            </div>
-                        )}
-                        {scanResult && (
-                            <div className={`flex items-center gap-2 p-3 rounded-lg ${scanResult.safe ? 'text-green-400 bg-green-400/10' : 'text-red-400 bg-red-400/10'}`}>
-                                <Icons.Shield /> <span>{scanResult.msg}</span>
-                            </div>
-                        )}
-
-                        <button disabled={scanning} type="submit" className="w-full bg-blue-600 hover:bg-blue-700 disabled:opacity-50 transition rounded-lg p-3 font-bold mt-4">
-                            Publish File
-                        </button>
-                    </form>
-                </div>
-            );
+                    request.onsuccess = (event) => {
+                        this.db = event.target.result;
+                        resolve();
+                    };
+                    request.onerror = (event) => reject(event.target.error);
+                });
+            },
+            async get(key) {
+                return new Promise((resolve, reject) => {
+                    const transaction = this.db.transaction(['data'], 'readonly');
+                    const store = transaction.objectStore('data');
+                    const request = store.get(key);
+                    request.onsuccess = () => resolve(request.result);
+                    request.onerror = () => reject(request.error);
+                });
+            },
+            async set(key, value) {
+                return new Promise((resolve, reject) => {
+                    const transaction = this.db.transaction(['data'], 'readwrite');
+                    const store = transaction.objectStore('data');
+                    const request = store.put(value, key);
+                    request.onsuccess = () => resolve();
+                    request.onerror = () => reject(request.error);
+                });
+            }
         };
 
-        const FileDetailsView = ({ user, files, selectedFileId, comments, usersList, updateDatabase, showMessage, setView }) => {
-            const [commentText, setCommentText] = useState('');
-            const [downloadingId, setDownloadingId] = useState(null);
-            
-            const file = files[selectedFileId];
-            if (!file) return <div className="text-center mt-20 text-red-400 text-xl font-bold">File not found or removed.</div>;
+        // --- 2. State & Session ---
+        let state = {
+            currentUser: null,
+            currentView: 'home',
+            activeAppId: null,
+            tempUploadData: {},
+            selectedStars: 0,
+            isAdminActive: false,
+            data: {
+                users: [],
+                apps: [],
+                bannedIPs: [] // Simulated
+            }
+        };
 
-            const fileComments = Object.values(comments).filter(c => c.fileId === file.id).sort((a,b) => b.timestamp - a.timestamp);
-            const likesCount = file.likes ? file.likes.length : 0;
-            const hasLiked = user && file.likes && file.likes.includes(user.nick);
-
-            const toggleLike = () => {
-                if(!user) return showMessage("Login to like files.", "error");
-                let newLikes = file.likes ? [...file.likes] : [];
-                if(hasLiked) {
-                    newLikes = newLikes.filter(n => n !== user.nick);
-                } else {
-                    newLikes.push(user.nick);
+        // --- 3. i18n (Language System) ---
+        const i18n = {
+            currentLang: 'en',
+            langs: {
+                en: {
+                    search_ph: "Search apps & games...", nav_upload: "Upload", home_rec: "Recommended for you", home_hits: "Hits",
+                    btn_download: "Download", btn_play: "Play", reviews_title: "Ratings and reviews", similar_apps: "Similar apps",
+                    set_title: "Account Settings", set_lang: "Language", set_user: "Change Username", set_pass: "Change Password",
+                    btn_update: "Update", no_files: "No files available", admin_panel: "Admin Panel"
+                },
+                pl: {
+                    search_ph: "Szukaj aplikacji i gier...", nav_upload: "Prześlij", home_rec: "Polecane dla Ciebie", home_hits: "Hity",
+                    btn_download: "Pobierz", btn_play: "Graj", reviews_title: "Oceny i recenzje", similar_apps: "Podobne aplikacje",
+                    set_title: "Ustawienia Konta", set_lang: "Język", set_user: "Zmień nazwę", set_pass: "Zmień hasło",
+                    btn_update: "Aktualizuj", no_files: "Brak plików", admin_panel: "Panel Administratora"
+                },
+                es: {
+                    search_ph: "Buscar aplicaciones...", nav_upload: "Subir", home_rec: "Recomendado para ti", home_hits: "Éxitos",
+                    btn_download: "Descargar", btn_play: "Jugar", reviews_title: "Reseñas", similar_apps: "Aplicaciones similares",
+                    set_title: "Configuración", set_lang: "Idioma", set_user: "Cambiar usuario", set_pass: "Cambiar contraseña",
+                    btn_update: "Actualizar", no_files: "Sin archivos", admin_panel: "Panel de Admin"
+                },
+                de: {
+                    search_ph: "Suchen...", nav_upload: "Hochladen", home_rec: "Empfohlen", home_hits: "Hits",
+                    btn_download: "Herunterladen", btn_play: "Spielen", reviews_title: "Rezensionen", similar_apps: "Ähnliche Apps",
+                    set_title: "Einstellungen", set_lang: "Sprache", set_user: "Benutzername ändern", set_pass: "Passwort ändern",
+                    btn_update: "Aktualisieren", no_files: "Keine Dateien", admin_panel: "Admin-Panel"
                 }
-                updateDatabase('files', file.id, { ...file, likes: newLikes });
-            };
-
-            const handleReport = () => {
-                if(!user) return showMessage("Login to report.", "error");
-                const reason = prompt(`Reason for reporting ${file.name}:`);
-                if(reason) {
-                    updateDatabase('reports', generateId(), { fileId: file.id, reason, reporter: user.nick, timestamp: Date.now() });
-                    showMessage("Report submitted", "success");
+            },
+            init() {
+                const saved = localStorage.getItem('sd_lang');
+                if(saved && this.langs[saved]) this.currentLang = saved;
+                const sel = document.getElementById('langSelect');
+                if(sel) sel.value = this.currentLang;
+                this.updateDOM();
+            },
+            t(key) {
+                return this.langs[this.currentLang][key] || key;
+            },
+            setLang(lang) {
+                if(this.langs[lang]) {
+                    this.currentLang = lang;
+                    localStorage.setItem('sd_lang', lang);
+                    this.updateDOM();
+                    ui.showToast(lang === 'pl' ? 'Zmieniono język' : 'Language changed', 'success');
+                    ui.switchView(state.currentView, state.activeAppId); // Refresh view
                 }
-            };
-
-            const executeDownload = () => {
-                if(!navigator.onLine && file.isDirectLink) return showMessage("No internet connection for P2P", "error");
+            },
+            updateDOM() {
+                const setEl = (id, key) => { const el = document.getElementById(id); if(el) el.innerText = this.t(key); };
+                setEl('nav_upload', 'nav_upload');
+                setEl('home_rec', 'home_rec');
+                const hitsEl = document.getElementById('home_hits'); if(hitsEl) hitsEl.innerText = this.t('home_hits');
+                setEl('settings_title', 'set_title');
+                setEl('set_lang', 'set_lang');
+                setEl('set_user', 'set_user');
+                setEl('set_pass', 'set_pass');
+                setEl('btnUpdateUser', 'btn_update');
+                setEl('btnUpdatePass', 'btn_update');
                 
-                const incrementDownload = () => updateDatabase('files', file.id, { ...file, downloads: (file.downloads || 0) + 1 });
+                const search = document.getElementById('searchInput');
+                if(search) search.placeholder = this.t('search_ph');
+            }
+        };
 
-                if (!file.isDirectLink) {
-                    const a = document.createElement('a');
-                    a.href = file.dataUrl;
-                    a.download = file.fileName || file.name;
-                    a.click();
-                    incrementDownload();
-                    showMessage("Download started from network memory.", "success");
+        // --- 4. Core System & UI ---
+        const ui = {
+            formatNumber(num) {
+                if (num >= 1000000000) return (num / 1000000000).toFixed(1).replace(/\.0$/, '') + 'b';
+                if (num >= 1000000) return (num / 1000000).toFixed(1).replace(/\.0$/, '') + 'mln';
+                if (num >= 1000) return (num / 1000).toFixed(1).replace(/\.0$/, '') + 'k';
+                return num;
+            },
+            showToast(msg, type = 'info') {
+                const container = document.getElementById('toastContainer');
+                const toast = document.createElement('div');
+                const colors = {
+                    success: 'bg-emerald-500', error: 'bg-red-500', info: 'bg-blue-500', warning: 'bg-yellow-500'
+                };
+                const icons = {
+                    success: 'fa-check-circle', error: 'fa-circle-exclamation', info: 'fa-info-circle', warning: 'fa-triangle-exclamation'
+                };
+                
+                toast.className = `${colors[type]} text-white px-6 py-3 rounded-xl shadow-lg flex items-center gap-3 animate-slide-up transition-all duration-300 transform`;
+                toast.innerHTML = `<i class="fa-solid ${icons[type]} text-lg"></i><span class="font-medium">${msg}</span>`;
+                
+                container.appendChild(toast);
+                setTimeout(() => {
+                    toast.classList.add('opacity-0', 'translate-y-4');
+                    setTimeout(() => toast.remove(), 300);
+                }, 3000);
+            },
+            switchView(viewName, appId = null) {
+                document.querySelectorAll('.view-section').forEach(el => el.classList.add('hidden'));
+                const view = document.getElementById(`view-${viewName}`);
+                if (view) {
+                    view.classList.remove('hidden');
+                    state.currentView = viewName;
+                    
+                    if (viewName === 'home') appStore.renderApps();
+                    if (viewName === 'app' && appId) {
+                        state.activeAppId = appId;
+                        appStore.renderAppDetails(appId);
+                    }
+                    if (viewName === 'admin') admin.render();
+                    if (viewName === 'upload') appStore.resetUpload();
+                }
+                window.scrollTo({ top: 0, behavior: 'smooth' });
+            },
+            goToUpload() {
+                if(auth.requireLogin()) this.switchView('upload');
+            },
+            toggleUserMenu() {
+                const menu = document.getElementById('userDropdownMenu');
+                if (menu) menu.classList.toggle('hidden');
+            },
+            updateMenu() {
+                const c = document.getElementById('userMenuContainer');
+                if (state.currentUser) {
+                    c.innerHTML = `
+                        <div class="relative">
+                            <button onclick="ui.toggleUserMenu(); event.stopPropagation();" class="flex items-center gap-2 bg-gray-100 hover:bg-gray-200 px-4 py-2 rounded-full font-bold transition-colors">
+                                <div class="w-7 h-7 bg-emerald-500 rounded-full text-white flex items-center justify-center text-xs">${state.currentUser.username[0].toUpperCase()}</div>
+                                <span class="hidden sm:block">${state.currentUser.username}</span>
+                            </button>
+                            <div id="userDropdownMenu" class="absolute right-0 mt-2 w-48 bg-white border border-gray-100 rounded-xl shadow-xl py-2 hidden transition-all z-50">
+                                ${state.isAdminActive ? `<button onclick="ui.switchView('admin'); ui.toggleUserMenu()" class="w-full text-left px-4 py-2 hover:bg-gray-50 text-red-600 font-bold"><i class="fa-solid fa-shield-halved mr-2"></i>${i18n.t('admin_panel')}</button>` : ''}
+                                <button onclick="ui.switchView('settings'); ui.toggleUserMenu()" class="w-full text-left px-4 py-2 hover:bg-gray-50 text-gray-700 font-medium"><i class="fa-solid fa-gear mr-2"></i>${i18n.t('set_title')}</button>
+                                <hr class="my-2 border-gray-50">
+                                <button onclick="auth.logout()" class="w-full text-left px-4 py-2 hover:bg-gray-50 text-red-500 font-medium"><i class="fa-solid fa-right-from-bracket mr-2"></i>Logout</button>
+                            </div>
+                        </div>
+                    `;
                 } else {
-                    setDownloadingId(file.id);
-                    showMessage("Establishing Direct Connection...", "info");
-                    
-                    webtorrentClient.add(file.magnet, (torrent) => {
-                        torrent.files.forEach(tFile => {
-                            tFile.getBlobURL((err, url) => {
-                                if (err) {
-                                    showMessage("Seeder is offline.", "error");
-                                    setDownloadingId(null);
-                                    return;
-                                }
+                    c.innerHTML = `<button onclick="ui.openModal('authModal')" class="bg-gray-900 text-white px-5 py-2 rounded-full font-bold hover:bg-gray-800 shadow-md">Sign In</button>`;
+                }
+            },
+            openModal(id) {
+                const modal = document.getElementById(id);
+                const content = document.getElementById(id + 'Content');
+                modal.classList.remove('hidden');
+                modal.classList.add('flex');
+                setTimeout(() => {
+                    content.classList.remove('scale-95', 'opacity-0');
+                    content.classList.add('scale-100', 'opacity-100');
+                }, 10);
+            },
+            closeModal(id) {
+                const modal = document.getElementById(id);
+                const content = document.getElementById(id + 'Content');
+                content.classList.remove('scale-100', 'opacity-100');
+                content.classList.add('scale-95', 'opacity-0');
+                setTimeout(() => {
+                    modal.classList.add('hidden');
+                    modal.classList.remove('flex');
+                }, 200);
+            },
+            searchApps() {
+                const query = document.getElementById('searchInput').value.toLowerCase();
+                if(query) {
+                    this.switchView('home');
+                    const filtered = state.data.apps.filter(a => a.name.toLowerCase().includes(query) && !a.isDeleted);
+                    const grid = document.getElementById('recommendedAppsGrid');
+                    grid.innerHTML = '';
+                    if(filtered.length === 0) grid.innerHTML = `<p class="col-span-full text-center text-gray-500 py-8">No results found.</p>`;
+                    filtered.forEach(app => grid.appendChild(appStore.createAppCard(app)));
+                    document.getElementById('hitsAppsGrid').innerHTML = ''; // Clear hits on search
+                } else {
+                    appStore.renderApps();
+                }
+            }
+        };
 
-                                tFile.getBlob((err, blob) => {
-                                    if(!err && blob) {
-                                        const newFile = new File([blob], tFile.name, {type: blob.type});
-                                        localforage.setItem(`seed_${file.id}`, newFile);
-                                        webtorrentClient.seed(newFile);
-                                    }
-                                });
+        // --- 5. Authentication ---
+        const auth = {
+            isLoginMode: true,
+            async checkAdmin(hash) {
+                if (hash === '#7319112' && state.currentUser) {
+                    state.isAdminActive = true;
+                    let u = state.data.users.find(u => u.id === state.currentUser.id);
+                    if(u) u.isAdmin = true;
+                    await dbHelper.set('mainData', state.data);
+                    ui.showToast('Administrator privileges granted!', 'success');
+                    ui.updateMenu();
+                    window.location.hash = ''; // Clear hash
+                }
+            },
+            toggleAuthMode() {
+                this.isLoginMode = !this.isLoginMode;
+                document.getElementById('authTitle').innerText = this.isLoginMode ? 'Sign In' : 'Create Account';
+                document.getElementById('authSubmitBtn').innerText = this.isLoginMode ? 'Sign In' : 'Sign Up';
+                document.getElementById('authToggleText').innerText = this.isLoginMode ? "Don't have an account?" : "Already have an account?";
+                document.getElementById('authToggleBtn').innerText = this.isLoginMode ? 'Register' : 'Login';
+            },
+            async handleAuthSubmit() {
+                const userVal = document.getElementById('authUsername').value.trim();
+                const passVal = document.getElementById('authPassword').value;
 
-                                const a = document.createElement('a');
-                                a.href = url;
-                                a.download = tFile.name;
-                                a.click();
-                                incrementDownload();
-                                showMessage("Download completed!", "success");
-                                setDownloadingId(null);
-                            });
-                        });
-                    });
-                    
-                    setTimeout(() => {
-                        if(downloadingId === file.id) {
-                            setDownloadingId(null);
-                            showMessage("Cannot connect. Seeder is offline.", "error");
+                if (userVal.length < 3 || passVal.length < 4) {
+                    return ui.showToast('Username min 3 chars, Password min 4 chars.', 'error');
+                }
+
+                if (this.isLoginMode) {
+                    // Login
+                    const user = state.data.users.find(u => u.username.toLowerCase() === userVal.toLowerCase() && u.password === passVal);
+                    if (user) {
+                        if (state.data.bannedIPs.includes(user.ip)) {
+                            return ui.showToast('This account is permanently banned.', 'error');
                         }
-                    }, 25000);
-                }
-            };
-
-            useEffect(() => {
-                if (window.location.hash.startsWith('#/download/')) {
-                    executeDownload();
-                    window.history.replaceState(null, null, `#/file/${file.id}`);
-                }
-            }, []);
-
-            const postComment = (e) => {
-                e.preventDefault();
-                if (!user) return showMessage("You must be logged in to comment.", "error");
-                if (!commentText.trim()) return;
-
-                const commentId = generateId();
-                updateDatabase('comments', commentId, { fileId: file.id, author: user.nick, text: commentText, timestamp: Date.now() });
-                setCommentText('');
-                showMessage("Comment added!", "success");
-            };
-
-            return (
-                <div className="max-w-5xl mx-auto mt-8 px-4 pb-12">
-                    <button onClick={() => window.location.hash = ''} className="mb-6 flex items-center gap-2 text-blue-400 hover:text-blue-300 font-bold transition">
-                        <Icons.Back /> Back to Library
-                    </button>
-
-                    <div className="glass-panel rounded-xl overflow-hidden shadow-2xl flex flex-col md:flex-row mb-10 relative">
-                        <div className="absolute top-4 right-4 bg-slate-900/80 p-2 rounded-lg border border-slate-700 flex items-center gap-2 z-10 text-pink-400 font-bold cursor-pointer hover:scale-105 transition" onClick={toggleLike}>
-                            <Icons.Heart filled={hasLiked} /> {likesCount}
-                        </div>
-
-                        <div className="md:w-1/3 bg-slate-900 flex items-center justify-center relative min-h-[300px] border-b md:border-b-0 md:border-r border-slate-700">
-                            {file.img ? (
-                                <img src={file.img} alt={file.name} className="w-full h-full object-cover" />
-                            ) : (
-                                <div className="text-gray-500 font-medium">No Cover Image</div>
-                            )}
-                        </div>
-                        
-                        <div className="md:w-2/3 p-8 flex flex-col">
-                            <div className="flex justify-between items-start mb-4 pr-16">
-                                <h1 className="text-4xl font-extrabold text-white leading-tight">{file.name}</h1>
-                            </div>
-                            
-                            <div className="flex items-center gap-4 text-sm text-gray-400 mb-6 border-b border-slate-700 pb-6">
-                                <div className="flex items-center gap-2">By: <UserBadge nick={file.uploader} usersList={usersList} onClick={(n) => window.location.hash = `#/user/${n}`} /></div>
-                                <div className="w-1 h-1 rounded-full bg-slate-600"></div>
-                                <div>{file.size ? formatBytes(file.size) : 'Unknown size'}</div>
-                                <div className="w-1 h-1 rounded-full bg-slate-600"></div>
-                                <div className="text-blue-400 font-bold">{file.category}</div>
-                                <div className="w-1 h-1 rounded-full bg-slate-600"></div>
-                                <div className="text-green-400 font-bold">{file.downloads || 0} Downloads</div>
-                            </div>
-
-                            <div className="prose prose-invert text-gray-300 flex-1 mb-8 whitespace-pre-wrap">
-                                {file.desc || 'No description provided by the author.'}
-                            </div>
-
-                            <div className="flex flex-col sm:flex-row gap-4 mt-auto">
-                                <button 
-                                    onClick={executeDownload} 
-                                    disabled={downloadingId === file.id}
-                                    className="flex-1 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 disabled:opacity-50 transition py-4 rounded-xl font-bold flex justify-center items-center gap-3 text-lg shadow-lg">
-                                    {downloadingId === file.id ? 'Connecting...' : <React.Fragment><Icons.Download/> Download</React.Fragment>}
-                                </button>
-                                <button onClick={() => { navigator.clipboard.writeText(window.location.href); showMessage("Link copied!", "success"); }} className="bg-slate-800 hover:bg-slate-700 border border-slate-700 transition px-6 rounded-xl flex justify-center items-center text-white font-medium shadow-inner">
-                                    Copy Link
-                                </button>
-                                <button onClick={handleReport} className="bg-slate-800 hover:bg-red-600/20 border border-slate-700 hover:border-red-500/50 transition px-4 rounded-xl flex justify-center items-center text-gray-400 hover:text-red-400">
-                                    <Icons.Alert />
-                                </button>
-                            </div>
-                        </div>
-                    </div>
-
-                    {/* COMMENTS */}
-                    <div className="glass-panel p-8 rounded-xl shadow-lg">
-                        <h3 className="text-2xl font-bold mb-6 flex items-center gap-2"><Icons.Chat /> Community Comments</h3>
-                        {user ? (
-                            <form onSubmit={postComment} className="mb-8 flex gap-4">
-                                <input type="text" value={commentText} onChange={(e) => setCommentText(e.target.value)} placeholder="Add a comment..." className="flex-1 bg-slate-900 border border-slate-700 rounded-lg p-4 text-white outline-none focus:border-blue-500 transition" maxLength={250} />
-                                <button type="submit" className="bg-blue-600 hover:bg-blue-700 transition px-8 rounded-lg font-bold">Post</button>
-                            </form>
-                        ) : (
-                            <div className="mb-8 p-4 bg-slate-800/50 rounded-lg text-center text-gray-400 border border-slate-700">You must be logged in to post comments.</div>
-                        )}
-
-                        <div className="space-y-4">
-                            {fileComments.length === 0 && <p className="text-gray-500 italic">No comments yet. Be the first!</p>}
-                            {fileComments.map(c => (
-                                <div key={c.id || Math.random()} className="bg-slate-900/50 border border-slate-800 p-4 rounded-lg flex flex-col">
-                                    <div className="flex justify-between items-center mb-2">
-                                        <UserBadge nick={c.author} usersList={usersList} onClick={(n) => window.location.hash = `#/user/${n}`} />
-                                        <span className="text-xs text-gray-500">{new Date(c.timestamp).toLocaleString()}</span>
-                                    </div>
-                                    <p className="text-gray-300">{c.text}</p>
-                                </div>
-                            ))}
-                        </div>
-                    </div>
-                </div>
-            );
-        };
-
-        const DashboardView = ({ user, files, updateDatabase, showMessage }) => {
-            const [editingFile, setEditingFile] = useState(null);
-            
-            const myFiles = Object.values(files).filter(f => f && f.uploader === user.nick).sort((a,b) => b.timestamp - a.timestamp);
-
-            const handleDelete = (id) => {
-                if(confirm("Are you sure you want to delete YOUR file permanently?")) {
-                    updateDatabase('files', id, null);
-                    showMessage("File deleted.", "success");
-                }
-            };
-
-            const handleEditSave = (e) => {
-                e.preventDefault();
-                updateDatabase('files', editingFile.id, editingFile);
-                setEditingFile(null);
-                showMessage("File updated successfully!", "success");
-            };
-
-            const handleImageChange = (e) => {
-                const selectedImg = e.target.files[0];
-                if (selectedImg) {
-                    if (selectedImg.size > 100 * 1024) return showMessage("Max image size is 100KB", "error");
-                    const reader = new FileReader();
-                    reader.onload = (ev) => setEditingFile({...editingFile, img: ev.target.result});
-                    reader.readAsDataURL(selectedImg);
-                }
-            };
-
-            return (
-                <div className="max-w-6xl mx-auto mt-8 px-4">
-                    <h2 className="text-3xl font-black mb-6 flex items-center gap-2"><Icons.Dashboard /> My Dashboard</h2>
-                    
-                    {editingFile && (
-                        <div className="fixed inset-0 bg-black/80 z-50 flex items-center justify-center p-4 backdrop-blur-sm">
-                            <div className="glass-panel p-8 rounded-xl max-w-lg w-full">
-                                <h3 className="text-2xl font-bold mb-4">Edit File</h3>
-                                <form onSubmit={handleEditSave} className="space-y-4">
-                                    <input type="text" value={editingFile.name} onChange={e=>setEditingFile({...editingFile, name: e.target.value})} className="w-full bg-slate-900 border border-slate-700 p-3 rounded text-white" placeholder="File Name" required />
-                                    <textarea value={editingFile.desc} onChange={e=>setEditingFile({...editingFile, desc: e.target.value})} className="w-full bg-slate-900 border border-slate-700 p-3 rounded text-white h-24" placeholder="Description" />
-                                    <div>
-                                        <label className="block text-sm text-gray-400 mb-1">New Cover Image (Max 100KB)</label>
-                                        <input type="file" accept="image/*" onChange={handleImageChange} className="w-full bg-slate-900 border border-slate-700 p-2 rounded text-white" />
-                                    </div>
-                                    <div className="flex gap-2 pt-4">
-                                        <button type="submit" className="flex-1 bg-blue-600 hover:bg-blue-500 p-3 rounded font-bold transition">Save Changes</button>
-                                        <button type="button" onClick={()=>setEditingFile(null)} className="flex-1 bg-slate-700 hover:bg-slate-600 p-3 rounded font-bold transition">Cancel</button>
-                                    </div>
-                                </form>
-                            </div>
-                        </div>
-                    )}
-
-                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                        {myFiles.length === 0 && <p className="text-gray-400">You haven't uploaded any files yet.</p>}
-                        {myFiles.map(f => (
-                            <div key={f.id} className="glass-panel p-5 rounded-xl border-l-4 border-blue-500 flex flex-col">
-                                <h3 className="font-bold text-xl mb-1 truncate">{f.name}</h3>
-                                <p className="text-xs text-gray-400 mb-4">{f.downloads || 0} Downloads | {f.likes ? f.likes.length : 0} Likes</p>
-                                <div className="flex gap-2 mt-auto">
-                                    <button onClick={()=>setEditingFile(f)} className="flex-1 bg-slate-700 hover:bg-blue-600 transition p-2 rounded flex justify-center"><Icons.Edit/></button>
-                                    <button onClick={()=>handleDelete(f.id)} className="flex-1 bg-red-600/80 hover:bg-red-500 transition p-2 rounded flex justify-center"><Icons.Trash/></button>
-                                    <button onClick={()=>window.location.hash = `#/file/${f.id}`} className="flex-1 bg-slate-800 hover:bg-slate-700 border border-slate-600 transition p-2 rounded flex justify-center">View</button>
-                                </div>
-                            </div>
-                        ))}
-                    </div>
-                </div>
-            );
-        };
-
-        const UserProfileView = ({ viewArg, files, usersList }) => {
-            const profileNick = viewArg;
-            const profileFiles = Object.values(files).filter(f => f && f.uploader === profileNick).sort((a,b) => b.timestamp - a.timestamp);
-
-            return (
-                <div className="max-w-6xl mx-auto mt-8 px-4">
-                    <button onClick={() => window.location.hash = ''} className="mb-6 flex items-center gap-2 text-blue-400 hover:text-blue-300 font-bold transition">
-                        <Icons.Back /> Back
-                    </button>
-                    <div className="glass-panel p-8 rounded-xl mb-8 flex items-center gap-4">
-                        <div className="w-16 h-16 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-full flex items-center justify-center text-2xl font-black shadow-lg">
-                            {profileNick.charAt(0).toUpperCase()}
-                        </div>
-                        <div>
-                            <h2 className="text-3xl font-black"><UserBadge nick={profileNick} usersList={usersList} /></h2>
-                            <p className="text-gray-400 mt-1">Uploaded {profileFiles.length} files</p>
-                        </div>
-                    </div>
-                    
-                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                        {profileFiles.map(file => (
-                            <div key={file.id} onClick={() => window.location.hash = `#/file/${file.id}`} className="glass-panel rounded-xl overflow-hidden flex flex-col transition-all hover:scale-105 cursor-pointer border border-transparent hover:border-slate-500">
-                                <div className="h-32 bg-slate-900 flex items-center justify-center relative">
-                                    {file.img && <img src={file.img} className="w-full h-full object-cover opacity-80" />}
-                                    <div className="absolute inset-0 bg-gradient-to-t from-slate-900 to-transparent"></div>
-                                    <h3 className="absolute bottom-2 left-3 font-bold text-lg text-white truncate right-3">{file.name}</h3>
-                                </div>
-                                <div className="p-3 bg-slate-800 text-xs text-gray-400 flex justify-between">
-                                    <span>{file.category}</span>
-                                    <span><Icons.Heart filled={true}/> {file.likes ? file.likes.length : 0}</span>
-                                </div>
-                            </div>
-                        ))}
-                    </div>
-                </div>
-            );
-        };
-
-        const HomeView = ({ files, usersList, setView, setSelectedFileId }) => {
-            const [search, setSearch] = useState('');
-            const [selectedCategory, setSelectedCategory] = useState('All');
-
-            const validFiles = Object.values(files).filter(f => f && f.name);
-            const filteredFiles = validFiles.filter(f => {
-                const matchSearch = f.name.toLowerCase().includes(search.toLowerCase()) || (f.desc && f.desc.toLowerCase().includes(search.toLowerCase()));
-                const matchCat = selectedCategory === 'All' || f.category === selectedCategory;
-                return matchSearch && matchCat;
-            }).sort((a,b) => b.timestamp - a.timestamp);
-
-            return (
-                <div className="max-w-7xl mx-auto mt-8 px-4">
-                    <div className="flex flex-col md:flex-row gap-4 mb-8">
-                        <div className="flex-1 relative">
-                            <div className="absolute top-3 left-3 text-gray-400"><Icons.Search /></div>
-                            <input type="text" placeholder="Search files across the network..." value={search} onChange={e=>setSearch(e.target.value)} className="w-full pl-10 pr-4 py-3 bg-slate-800 border border-slate-700 rounded-xl text-white outline-none focus:border-blue-500 transition shadow-lg" />
-                        </div>
-                        <select value={selectedCategory} onChange={e=>setSelectedCategory(e.target.value)} className="bg-slate-800 border border-slate-700 rounded-xl px-4 py-3 text-white outline-none shadow-lg">
-                            <option value="All">All Categories</option>
-                            {CATEGORIES.map(c => <option key={c} value={c}>{c}</option>)}
-                        </select>
-                    </div>
-
-                    {filteredFiles.length === 0 && <div className="text-center text-gray-500 py-10 text-xl">No files match your criteria. Upload the first one!</div>}
-
-                    <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-6">
-                        {filteredFiles.map(file => (
-                            <div 
-                                key={file.id} 
-                                onClick={() => window.location.hash = `#/file/${file.id}`}
-                                className="glass-panel rounded-xl overflow-hidden flex flex-col transition-all hover:scale-105 hover:border-blue-500/50 hover:shadow-2xl hover:shadow-blue-900/20 cursor-pointer group"
-                            >
-                                <div className="h-36 bg-slate-900 flex items-center justify-center relative border-b border-slate-700 overflow-hidden">
-                                    {file.img ? (
-                                        <img src={file.img} alt={file.name} className="w-full h-full object-cover transition duration-500 group-hover:scale-110" onError={(e)=>{e.target.style.display='none'; e.target.nextSibling.style.display='flex';}} />
-                                    ) : null}
-                                    <div className="absolute inset-0 flex items-center justify-center text-gray-600 font-medium bg-slate-900" style={{display: file.img ? 'none' : 'flex'}}>
-                                        No Cover
-                                    </div>
-                                    <div className="absolute top-2 right-2 bg-slate-900/80 backdrop-blur text-xs px-2 py-1 rounded text-gray-300 border border-slate-700 flex items-center gap-1">
-                                        <Icons.Heart filled={true} className="w-3 h-3 text-pink-400"/> {file.likes ? file.likes.length : 0}
-                                    </div>
-                                </div>
-                                <div className="p-4 flex-1 flex flex-col">
-                                    <h3 className="font-bold text-base text-white truncate mb-1" title={file.name}>{file.name}</h3>
-                                    <span className="text-[10px] text-blue-400 mb-3 uppercase tracking-wider font-bold">{file.category}</span>
-                                    
-                                    <div className="flex justify-between items-center text-xs text-gray-500 mt-auto border-t border-slate-700/50 pt-3">
-                                        <UserBadge nick={file.uploader} usersList={usersList} onClick={(n) => window.location.hash = `#/user/${n}`} />
-                                        <span>{file.downloads || 0} DLs</span>
-                                    </div>
-                                </div>
-                            </div>
-                        ))}
-                    </div>
-                </div>
-            );
-        };
-
-        const App = () => {
-            const [user, setUser] = useState(null);
-            const [usersList, setUsersList] = useState({});
-            const [files, setFiles] = useState({});
-            const [reports, setReports] = useState({});
-            const [comments, setComments] = useState({}); 
-            const [view, setView] = useState('home'); 
-            const [viewArg, setViewArg] = useState(null); // Used for specific IDs in routes
-            const [loading, setLoading] = useState(true);
-            const [message, setMessage] = useState(null);
-            const [netStatus, setNetStatus] = useState('Disconnected'); 
-            const [bannedInfo, setBannedInfo] = useState(null);
-
-            const mqttRef = useRef(null);
-
-            const updateDatabase = (section, id, data) => {
-                try {
-                    const currentDb = JSON.parse(localStorage.getItem('superdwn_netdb') || '{"users":{}, "files":{}, "reports":{}, "comments":{}}');
-                    if (!currentDb.comments) currentDb.comments = {}; 
-                    
-                    if (data === null) {
-                        delete currentDb[section][id];
+                        state.currentUser = { id: user.id, username: user.username };
+                        state.isAdminActive = user.isAdmin || false;
+                        ui.showToast(`Welcome back, ${user.username}!`, 'success');
+                        ui.closeModal('authModal');
+                        ui.updateMenu();
+                        this.checkAdmin(window.location.hash);
                     } else {
-                        currentDb[section][id] = data;
+                        ui.showToast('Invalid credentials.', 'error');
                     }
-                    
-                    localStorage.setItem('superdwn_netdb', JSON.stringify(currentDb));
-                    
-                    if (section === 'users') setUsersList(currentDb.users);
-                    if (section === 'files') setFiles(currentDb.files);
-                    if (section === 'reports') setReports(currentDb.reports);
-                    if (section === 'comments') setComments(currentDb.comments);
-
-                    if (mqttRef.current && mqttRef.current.connected) {
-                        mqttRef.current.publish(MESH_TOPIC, JSON.stringify({ type: 'UPDATE', db: currentDb }));
+                } else {
+                    // Register
+                    if (state.data.users.find(u => u.username.toLowerCase() === userVal.toLowerCase())) {
+                        return ui.showToast('Username already taken!', 'error');
                     }
-                } catch (err) {}
-            };
-
-            // HASH ROUTER
-            useEffect(() => {
-                const handleHash = () => {
-                    const hash = window.location.hash;
-                    if (hash.startsWith('#/file/')) {
-                        setViewArg(hash.replace('#/file/', ''));
-                        setView('file_details');
-                    } else if (hash.startsWith('#/download/')) {
-                        setViewArg(hash.replace('#/download/', ''));
-                        setView('file_details'); // Handled inside details component
-                    } else if (hash.startsWith('#/user/')) {
-                        setViewArg(hash.replace('#/user/', ''));
-                        setView('user_profile');
-                    } else if (hash === '#/dashboard') {
-                        setView('dashboard');
-                    } else if (hash === '#/upload') {
-                        setView('upload');
-                    } else if (hash === '') {
-                        setView('home');
-                        setViewArg(null);
-                    }
-                };
-                window.addEventListener('hashchange', handleHash);
-                handleHash();
-                return () => window.removeEventListener('hashchange', handleHash);
-            }, []);
-
-            useEffect(() => {
-                let isMounted = true;
-
-                const localDbString = localStorage.getItem('superdwn_netdb');
-                let currentDb = { users: {}, files: {}, reports: {}, comments: {} };
-                if (localDbString) {
-                    try { currentDb = { ...currentDb, ...JSON.parse(localDbString) }; } catch(e){}
+                    const newUser = {
+                        id: 'u_' + Date.now(),
+                        username: userVal,
+                        password: passVal,
+                        isAdmin: false,
+                        ip: 'ip_' + Math.random().toString(36).substr(2, 9) // Simulating IP
+                    };
+                    state.data.users.push(newUser);
+                    await dbHelper.set('mainData', state.data);
+                    state.currentUser = { id: newUser.id, username: newUser.username };
+                    ui.showToast('Account created successfully!', 'success');
+                    ui.closeModal('authModal');
+                    ui.updateMenu();
+                    this.checkAdmin(window.location.hash);
                 }
+            },
+            logout() {
+                state.currentUser = null;
+                state.isAdminActive = false;
+                ui.updateMenu();
+                ui.switchView('home');
+                ui.showToast('Logged out successfully.', 'info');
+            },
+            requireLogin() {
+                if (!state.currentUser) {
+                    ui.openModal('authModal');
+                    return false;
+                }
+                return true;
+            },
+            async changeUsername() {
+                const newVal = document.getElementById('setNewUsername').value.trim();
+                if(newVal.length < 3) return ui.showToast('Username too short.', 'error');
+                if(state.data.users.find(u => u.username.toLowerCase() === newVal.toLowerCase())) return ui.showToast('Username taken.', 'error');
                 
-                if(isMounted) {
-                    setUsersList(currentDb.users || {});
-                    setFiles(currentDb.files || {});
-                    setReports(currentDb.reports || {});
-                    setComments(currentDb.comments || {});
-                    
-                    const localUser = localStorage.getItem('dwn_user_auth');
-                    if (localUser) setUser(JSON.parse(localUser));
+                let u = state.data.users.find(u => u.id === state.currentUser.id);
+                if(u) {
+                    u.username = newVal;
+                    state.currentUser.username = newVal;
+                    await dbHelper.set('mainData', state.data);
+                    ui.updateMenu();
+                    ui.showToast('Username updated!', 'success');
+                    document.getElementById('setNewUsername').value = '';
                 }
-
-                localforage.keys().then(keys => {
-                    keys.forEach(k => {
-                        if (k.startsWith('seed_')) {
-                            localforage.getItem(k).then(blob => {
-                                if (blob && webtorrentClient && !webtorrentClient.get(blob)) {
-                                    webtorrentClient.seed(blob, () => console.log('Re-seeding active'));
-                                }
-                            });
-                        }
-                    });
-                });
-
-                if(!navigator.onLine) {
-                    showMessage("Offline Mode.", "error");
-                    setLoading(false);
-                    return;
+            },
+            async changePassword() {
+                const oldP = document.getElementById('setOldPass').value;
+                const newP = document.getElementById('setNewPass').value;
+                let u = state.data.users.find(u => u.id === state.currentUser.id);
+                if(u && u.password === oldP && newP.length >= 4) {
+                    u.password = newP;
+                    await dbHelper.set('mainData', state.data);
+                    ui.showToast('Password updated!', 'success');
+                    document.getElementById('setOldPass').value = '';
+                    document.getElementById('setNewPass').value = '';
+                } else {
+                    ui.showToast('Invalid current password or new password too short.', 'error');
                 }
-
-                setNetStatus('Connecting...');
-                const client = mqtt.connect(MQTT_BROKER);
-                mqttRef.current = client;
-
-                client.on('connect', () => {
-                    if(isMounted) setNetStatus('Connected');
-                    client.subscribe(MESH_TOPIC);
-                    client.publish(MESH_TOPIC, JSON.stringify({ type: 'REQ_SYNC' }));
-                    if(isMounted) setLoading(false);
-                });
-
-                client.on('reconnect', () => { if(isMounted) setNetStatus('Reconnecting...'); });
-                client.on('offline', () => { if(isMounted) setNetStatus('Network Error'); });
-
-                client.on('message', (topic, msg) => {
-                    try {
-                        const payload = JSON.parse(msg.toString());
-                        
-                        if (payload.type === 'REQ_SYNC') {
-                            const dbState = JSON.parse(localStorage.getItem('superdwn_netdb') || '{}');
-                            if (dbState.users && Object.keys(dbState.users).length > 0) {
-                                client.publish(MESH_TOPIC, JSON.stringify({ type: 'SYNC', db: dbState }));
-                            }
-                        } 
-                        else if (payload.type === 'SYNC' || payload.type === 'UPDATE') {
-                            const localDb = JSON.parse(localStorage.getItem('superdwn_netdb') || '{"users":{}, "files":{}, "reports":{}, "comments":{}}');
-                            const netDb = payload.db;
-                            
-                            const finalDb = { 
-                                users: { ...localDb.users, ...(netDb.users || {}) }, 
-                                files: { ...localDb.files, ...(netDb.files || {}) }, 
-                                reports: { ...localDb.reports, ...(netDb.reports || {}) }, 
-                                comments: { ...(localDb.comments || {}), ...(netDb.comments || {}) } 
-                            };
-                            localStorage.setItem('superdwn_netdb', JSON.stringify(finalDb));
-                            
-                            if(isMounted) {
-                                setUsersList(finalDb.users);
-                                setFiles(finalDb.files);
-                                setReports(finalDb.reports);
-                                setComments(finalDb.comments);
-                            }
-                        }
-                    } catch(e){}
-                });
-
-                return () => { isMounted = false; client.end(); };
-            }, []);
-
-            useEffect(() => {
-                const checkAdminHash = () => {
-                    if (window.location.href.includes('7319112') && user) {
-                        let newRole = user.role || 'user';
-                        let upgraded = false;
-                        if (newRole !== 'owner') {
-                            if (newRole === 'admin') {
-                                newRole = 'owner'; upgraded = true;
-                                showMessage("You have been promoted to OWNER OF SUPERDOWNLOADER!", "success");
-                            } else {
-                                newRole = 'admin'; upgraded = true;
-                                showMessage("You have been granted ADMIN privileges!", "success");
-                            }
-                        }
-                        if (upgraded) {
-                            const updatedUser = { ...user, role: newRole };
-                            updateDatabase('users', user.nick, updatedUser);
-                            localStorage.setItem('dwn_user_auth', JSON.stringify(updatedUser));
-                            setUser(updatedUser);
-                            window.history.replaceState(null, null, window.location.pathname + window.location.hash);
-                        }
-                    }
-                };
-                checkAdminHash();
-            }, [user, window.location.href]);
-
-            useEffect(() => {
-                if (user && usersList[user.nick]) {
-                    const dbUser = usersList[user.nick];
-                    if (dbUser.isBanned) {
-                        if (dbUser.banExpires === 'forever' || dbUser.banExpires > Date.now()) {
-                            setBannedInfo({ reason: dbUser.banReason, expires: dbUser.banExpires });
-                        } else {
-                            updateDatabase('users', user.nick, { ...dbUser, isBanned: false, banReason: '', banExpires: 0 });
-                            setBannedInfo(null);
-                        }
-                    } else { setBannedInfo(null); }
-
-                    if (dbUser.role !== user.role) {
-                        const updated = {...user, role: dbUser.role};
-                        setUser(updated);
-                        localStorage.setItem('dwn_user_auth', JSON.stringify(updated));
-                    }
+            },
+            async deleteAccount() {
+                if(confirm("Are you absolutely sure? This cannot be undone.")) {
+                    state.data.users = state.data.users.filter(u => u.id !== state.currentUser.id);
+                    await dbHelper.set('mainData', state.data);
+                    this.logout();
                 }
-            }, [user, usersList]);
+            }
+        };
 
-            const showMessage = (text, type = 'info') => {
-                setMessage({ text, type });
-                setTimeout(() => setMessage(null), 4000);
-            };
+        // --- 6. App Store Functionality ---
+        const appStore = {
+            createAppCard(app) {
+                const div = document.createElement('div');
+                div.className = 'app-card bg-white rounded-2xl p-4 cursor-pointer flex flex-col h-full border border-gray-100 relative';
+                div.onclick = () => ui.switchView('app', app.id);
+                
+                let badgeHTML = '';
+                if (app.isVerified) badgeHTML += `<div class="absolute top-2 left-2 bg-blue-500 text-white text-[10px] font-bold px-2 py-1 rounded-full shadow-sm" title="Verified by PlayDownloader"><i class="fa-solid fa-shield-check mr-1"></i>Verified</div>`;
+                if (app.downloads >= 1000000) badgeHTML += `<div class="absolute top-2 right-2 bg-yellow-400 text-yellow-900 text-[10px] font-bold px-2 py-1 rounded-full shadow-sm" title="1M+ Downloads Badge"><i class="fa-solid fa-medal mr-1"></i>1M+</div>`;
+                if (app.isEduVerified) badgeHTML += `<div class="absolute bottom-20 right-2 bg-green-500 text-white text-[10px] font-bold px-2 py-1 rounded-full shadow-sm"><i class="fa-solid fa-graduation-cap mr-1"></i>Edu</div>`;
 
-            const logout = () => {
-                localStorage.removeItem('dwn_user_auth');
-                setUser(null);
-                window.location.hash = '';
-                setBannedInfo(null);
-            };
-
-            if (bannedInfo) {
-                return (
-                    <div className="fixed inset-0 min-h-screen bg-slate-950 flex flex-col items-center justify-center p-4 z-50 overflow-hidden">
-                        <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,_var(--tw-gradient-stops))] from-red-900/20 via-slate-950 to-slate-950"></div>
-                        <div className="max-w-lg w-full bg-red-950/30 border border-red-500/50 p-10 rounded-3xl text-center shadow-[0_0_100px_rgba(239,68,68,0.15)] relative z-10 backdrop-blur-md">
-                            <div className="bg-red-500/20 p-4 rounded-full inline-block mb-6"><Icons.Ban /></div>
-                            <h1 className="text-4xl font-black text-white mb-2">ACCOUNT SUSPENDED</h1>
-                            <p className="text-red-300 mb-8">Access to the decentralized network revoked.</p>
-                            <div className="bg-slate-900/80 border border-slate-700/50 p-6 rounded-2xl text-left mb-8 shadow-inner">
-                                <div className="text-xs text-gray-500 uppercase font-bold tracking-wider mb-1">Reason</div>
-                                <div className="font-bold text-red-400 mb-5 text-lg">{bannedInfo.reason || 'Violation of policies'}</div>
-                                <div className="text-xs text-gray-500 uppercase font-bold tracking-wider mb-1">Lift Date</div>
-                                <div className="font-bold text-white text-lg">{bannedInfo.expires === 'forever' ? <span className="text-red-500 uppercase">Permanent</span> : new Date(bannedInfo.expires).toLocaleString()}</div>
+                const rating = this.calculateAverageRating(app.reviews);
+                
+                div.innerHTML = `
+                    ${badgeHTML}
+                    <div class="w-full aspect-square rounded-xl bg-gray-100 mb-3 overflow-hidden">
+                        <img src="${app.iconUrl}" class="w-full h-full object-cover" onerror="this.src='https://placehold.co/200x200/e2e8f0/64748b?text=Icon'">
+                    </div>
+                    <div class="flex-1 flex flex-col">
+                        <h3 class="font-bold text-gray-900 leading-tight mb-1 line-clamp-1">${app.name}</h3>
+                        <p class="text-xs text-gray-500 mb-2">${app.authorName}</p>
+                        <div class="mt-auto flex items-center justify-between">
+                            <div class="flex items-center text-xs font-bold text-gray-700">
+                                <span>${rating}</span><i class="fa-solid fa-star text-amber-400 ml-1 text-[10px]"></i>
                             </div>
-                            <button onClick={logout} className="w-full bg-red-600 hover:bg-red-500 text-white font-bold py-4 rounded-xl shadow-lg">Log Out</button>
+                            <span class="text-xs font-semibold text-gray-500 bg-gray-100 px-2 py-1 rounded-md">${ui.formatNumber(app.downloads)}</span>
                         </div>
                     </div>
-                );
+                `;
+                return div;
+            },
+            renderApps() {
+                const recGrid = document.getElementById('recommendedAppsGrid');
+                const hitsGrid = document.getElementById('hitsAppsGrid');
+                recGrid.innerHTML = '';
+                hitsGrid.innerHTML = '';
+                
+                const visibleApps = state.data.apps.filter(a => !a.isDeleted);
+                
+                // Sort by new for recommended (simple simulation)
+                const recApps = [...visibleApps].reverse().slice(0, 12);
+                recApps.forEach(app => recGrid.appendChild(this.createAppCard(app)));
+
+                // Sort by downloads for hits
+                const hitApps = [...visibleApps].sort((a, b) => b.downloads - a.downloads).slice(0, 6);
+                hitApps.forEach(app => {
+                    const card = this.createAppCard(app);
+                    card.classList.add('flex-row', 'items-center', 'p-3');
+                    card.innerHTML = `
+                        <img src="${app.iconUrl}" class="w-16 h-16 rounded-xl object-cover mr-4" onerror="this.src='https://placehold.co/100/e2e8f0/64748b?text=Icon'">
+                        <div class="flex-1">
+                            <h3 class="font-bold text-gray-900">${app.name}</h3>
+                            <div class="text-xs text-gray-500 mt-1"><i class="fa-solid fa-star text-amber-400 mr-1"></i>${this.calculateAverageRating(app.reviews)} &bull; ${ui.formatNumber(app.downloads)} DLs</div>
+                        </div>
+                    `;
+                    hitsGrid.appendChild(card);
+                });
+                
+                if(visibleApps.length === 0) {
+                    recGrid.innerHTML = `<p class="col-span-full text-center text-gray-500 py-10">${i18n.t('no_files')}</p>`;
+                }
+            },
+            renderAppDetails(id) {
+                const app = state.data.apps.find(a => a.id === id);
+                if (!app || app.isDeleted) return ui.switchView('home');
+
+                const view = document.getElementById('view-app');
+                const rating = this.calculateAverageRating(app.reviews);
+                
+                // Similar apps
+                const similarHTML = state.data.apps
+                    .filter(a => a.id !== id && !a.isDeleted)
+                    .slice(0, 4)
+                    .map(a => `
+                        <div onclick="ui.switchView('app', '${a.id}')" class="cursor-pointer text-center group">
+                            <img src="${a.iconUrl}" class="w-16 h-16 rounded-xl mx-auto mb-2 object-cover group-hover:scale-105 transition-transform" onerror="this.src='https://placehold.co/100'">
+                            <p class="text-xs font-bold text-gray-800 line-clamp-1">${a.name}</p>
+                        </div>
+                    `).join('') || `<p class="text-sm text-gray-500 w-full text-center">No similar apps</p>`;
+
+                let btnHTML = '';
+                if(app.apkFile) {
+                    btnHTML = `<button onclick="appStore.downloadApp('${app.id}')" class="flex-1 bg-emerald-600 text-white font-bold py-3 px-6 rounded-xl shadow-md hover:bg-emerald-700 transition-colors text-lg"><i class="fa-solid fa-download mr-2"></i>${i18n.t('btn_download')}</button>`;
+                } else {
+                    btnHTML = `<button disabled class="flex-1 bg-gray-300 text-gray-500 font-bold py-3 px-6 rounded-xl text-lg cursor-not-allowed">Brak plików</button>`;
+                }
+
+                view.innerHTML = `
+                    <div class="bg-white rounded-3xl shadow-sm border border-gray-100 overflow-hidden max-w-4xl mx-auto">
+                        <div class="p-6 md:p-10 flex flex-col md:flex-row gap-8">
+                            <!-- Icon -->
+                            <div class="w-32 h-32 md:w-48 md:h-48 flex-shrink-0 mx-auto md:mx-0 shadow-lg rounded-3xl overflow-hidden relative">
+                                <img src="${app.iconUrl}" class="w-full h-full object-cover" onerror="this.src='https://placehold.co/400'">
+                            </div>
+                            
+                            <!-- Info -->
+                            <div class="flex-1 text-center md:text-left flex flex-col">
+                                <h1 class="text-3xl md:text-4xl font-extrabold text-gray-900 mb-2">${app.name}</h1>
+                                <p class="text-lg text-emerald-600 font-semibold mb-4">${app.authorName}</p>
+                                
+                                <div class="flex flex-wrap items-center justify-center md:justify-start gap-6 mb-6">
+                                    <div class="text-center">
+                                        <div class="text-xl font-bold text-gray-900">${rating} <i class="fa-solid fa-star text-amber-400 text-sm"></i></div>
+                                        <div class="text-xs text-gray-500">${app.reviews.length} reviews</div>
+                                    </div>
+                                    <div class="h-8 w-px bg-gray-200"></div>
+                                    <div class="text-center">
+                                        <div class="text-xl font-bold text-gray-900">${ui.formatNumber(app.downloads)}+</div>
+                                        <div class="text-xs text-gray-500">Downloads</div>
+                                    </div>
+                                    <div class="h-8 w-px bg-gray-200"></div>
+                                    <div class="text-center">
+                                        <div class="w-8 h-8 mx-auto border-2 border-gray-900 rounded flex items-center justify-center font-bold text-sm">${app.ageRating}</div>
+                                        <div class="text-xs text-gray-500 mt-1">Age</div>
+                                    </div>
+                                </div>
+                                
+                                <div class="mt-auto flex gap-4">
+                                    ${btnHTML}
+                                    <button onclick="appStore.playGame()" class="bg-gray-100 text-emerald-700 font-bold py-3 px-6 rounded-xl hover:bg-gray-200 transition-colors"><i class="fa-solid fa-play mr-2"></i>${i18n.t('btn_play')}</button>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="p-6 md:p-10 border-t border-gray-100 bg-gray-50">
+                            <h3 class="font-bold text-gray-900 text-xl mb-4">About this app</h3>
+                            <p class="text-gray-700 leading-relaxed whitespace-pre-wrap">${app.description}</p>
+                        </div>
+
+                        <!-- Reviews Section -->
+                        <div class="p-6 md:p-10 border-t border-gray-100">
+                            <h3 class="font-bold text-gray-900 text-xl mb-6">${i18n.t('reviews_title')}</h3>
+                            
+                            ${state.currentUser ? `
+                                <div class="bg-gray-50 p-6 rounded-2xl mb-8 border border-gray-200">
+                                    <h4 class="font-bold text-gray-800 mb-3">Leave a review</h4>
+                                    <div class="flex gap-2 mb-3" id="starSelector">
+                                        ${[1,2,3,4,5].map(i => `<i class="fa-solid fa-star text-gray-300 text-2xl cursor-pointer hover:text-amber-400 transition-colors" onmouseover="appStore.hoverStars(${i})" onmouseout="appStore.hoverStars(state.selectedStars)" onclick="appStore.selectStars(${i})"></i>`).join('')}
+                                    </div>
+                                    <textarea id="reviewText" rows="3" class="w-full px-4 py-3 rounded-xl border border-gray-300 focus:ring-2 focus:ring-emerald-500 outline-none resize-none mb-3" placeholder="Describe your experience..."></textarea>
+                                    <button onclick="appStore.submitReview('${app.id}')" class="bg-emerald-600 text-white px-6 py-2 rounded-xl font-bold shadow hover:bg-emerald-700">Post Review</button>
+                                </div>
+                            ` : `<p class="text-sm text-gray-500 mb-6 bg-gray-50 p-4 rounded-xl text-center"><button onclick="ui.openModal('authModal')" class="text-emerald-600 font-bold underline">Sign in</button> to leave a review.</p>`}
+                            
+                            <div class="space-y-6">
+                                ${app.reviews.length ? app.reviews.map(r => `
+                                    <div class="border-b border-gray-100 pb-6 last:border-0 last:pb-0">
+                                        <div class="flex items-center gap-3 mb-2">
+                                            <div class="w-8 h-8 bg-gray-200 rounded-full flex items-center justify-center font-bold text-gray-600 text-xs">${r.authorName[0].toUpperCase()}</div>
+                                            <div>
+                                                <div class="font-bold text-sm text-gray-900">${r.authorName}</div>
+                                                <div class="flex text-amber-400 text-[10px]">
+                                                    ${Array(5).fill(0).map((_, i) => `<i class="fa-solid fa-star ${i < r.rating ? '' : 'text-gray-200'}"></i>`).join('')}
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <p class="text-gray-700 text-sm">${r.text}</p>
+                                    </div>
+                                `).join('') : `<p class="text-gray-500 text-center py-4">No reviews yet.</p>`}
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="max-w-4xl mx-auto mt-8">
+                        <h3 class="text-xl font-bold text-gray-900 mb-4">${i18n.t('similar_apps')}</h3>
+                        <div class="flex gap-4 overflow-x-auto pb-4 hide-scrollbar">
+                            ${similarHTML}
+                        </div>
+                    </div>
+                `;
+            },
+            calculateAverageRating(reviews) {
+                if (!reviews || reviews.length === 0) return '0.0';
+                const sum = reviews.reduce((a, b) => a + b.rating, 0);
+                return (sum / reviews.length).toFixed(1);
+            },
+            hoverStars(num) {
+                const stars = document.getElementById('starSelector').children;
+                for(let i=0; i<5; i++) {
+                    stars[i].className = `fa-solid fa-star text-2xl cursor-pointer transition-colors ${i < num ? 'text-amber-400' : 'text-gray-300'}`;
+                }
+            },
+            selectStars(num) {
+                state.selectedStars = num;
+                this.hoverStars(num);
+            },
+            async submitReview(appId) {
+                if (!state.selectedStars) return ui.showToast('Please select a star rating.', 'error');
+                const text = document.getElementById('reviewText').value.trim();
+                if (!text) return ui.showToast('Please write a review.', 'error');
+                
+                const app = state.data.apps.find(a => a.id === appId);
+                if (app) {
+                    app.reviews.unshift({
+                        id: 'r_' + Date.now(),
+                        authorId: state.currentUser.id,
+                        authorName: state.currentUser.username,
+                        rating: state.selectedStars,
+                        text: text,
+                        date: new Date().toISOString()
+                    });
+                    await dbHelper.set('mainData', state.data);
+                    state.selectedStars = 0;
+                    this.renderAppDetails(appId);
+                    ui.showToast('Review posted!', 'success');
+                }
+            },
+            playGame() {
+                ui.showToast('Requesting permission to run application...', 'info');
+                setTimeout(() => {
+                    ui.showToast('Application started (Simulation)', 'success');
+                }, 1500);
+            },
+            async downloadApp(id) {
+                const app = state.data.apps.find(a => a.id === id);
+                if(app && app.apkFile) {
+                    // Check family link simulation based on age rating
+                    if(app.ageRating === '18+' || app.ageRating === '16+') {
+                        const confirmDownload = confirm(`Family Link: This app is rated ${app.ageRating}. Are you sure you want to download it?`);
+                        if(!confirmDownload) return;
+                    }
+
+                    app.downloads++;
+                    await dbHelper.set('mainData', state.data);
+                    
+                    // Actually trigger download
+                    const link = document.createElement('a');
+                    link.href = app.apkFile;
+                    link.download = `${app.name.replace(/\s+/g, '_')}.apk`;
+                    document.body.appendChild(link);
+                    link.click();
+                    document.body.removeChild(link);
+                    
+                    this.renderAppDetails(id); // update counter
+                    ui.showToast('Download started!', 'success');
+                } else {
+                    ui.showToast('File not available.', 'error');
+                }
+            },
+            
+            // --- Upload Process ---
+            resetUpload() {
+                document.getElementById('uploadStep1').classList.remove('hidden');
+                document.getElementById('uploadStep2').classList.add('hidden');
+                document.getElementById('uploadStep3').classList.add('hidden');
+                document.getElementById('upName').value = '';
+                document.getElementById('upDesc').value = '';
+                document.getElementById('upIcon').value = '';
+                document.getElementById('upApk').value = '';
+                document.querySelectorAll('input[type="checkbox"]').forEach(c => c.checked = false);
+            },
+            nextUploadStep(step) {
+                if (step === 2) {
+                    const name = document.getElementById('upName').value.trim();
+                    const desc = document.getElementById('upDesc').value.trim();
+                    const iconFile = document.getElementById('upIcon').files[0];
+                    const apkFile = document.getElementById('upApk').files[0];
+
+                    if (name.length < 3) return ui.showToast('Name too short.', 'error');
+                    if (desc.length < 10) return ui.showToast('Description too short.', 'error');
+                    if (!iconFile) return ui.showToast('Please select an icon image.', 'error');
+                    if (!apkFile || !apkFile.name.endsWith('.apk')) return ui.showToast('You must upload a valid .apk file!', 'error');
+
+                    // Convert files to base64 for IDB storage
+                    const readAsDataURL = (file) => new Promise(res => {
+                        const reader = new FileReader();
+                        reader.onload = e => res(e.target.result);
+                        reader.readAsDataURL(file);
+                    });
+
+                    Promise.all([readAsDataURL(iconFile), readAsDataURL(apkFile)]).then(results => {
+                        state.tempUploadData = {
+                            name, desc, iconData: results[0], apkData: results[1]
+                        };
+                        document.getElementById('uploadStep1').classList.add('hidden');
+                        document.getElementById('uploadStep2').classList.remove('hidden');
+                    });
+                }
+            },
+            prevUploadStep() {
+                document.getElementById('uploadStep2').classList.add('hidden');
+                document.getElementById('uploadStep1').classList.remove('hidden');
+            },
+            calculateAIAgeRating() {
+                const isChk = id => document.getElementById(id).checked;
+                let score = 0;
+                
+                if(isChk('qExplicit') || isChk('qGambling') || isChk('qDrugs')) return '18+';
+                
+                if(isChk('qBlood')) score += 10;
+                if(isChk('qViolence')) score += 8;
+                if(isChk('qFear')) score += 5;
+                if(isChk('qSwear')) score += 6;
+                if(isChk('qSexMild')) score += 7;
+                if(isChk('qOnline')) score += 3;
+                
+                // AI Context modification
+                if(isChk('qEdu')) score -= 5; // Education mitigates some things
+                
+                if(score >= 12) return '16+';
+                if(score >= 7) return '13+';
+                if(score >= 3) return '7+';
+                return '3+';
+            },
+            async startUploadProcess() {
+                if (!document.getElementById('vBot').checked) return ui.showToast('Verify you are not a robot.', 'error');
+                if (!document.getElementById('vTos').checked) return ui.showToast('You must accept the ToS.', 'error');
+
+                document.getElementById('uploadStep2').classList.add('hidden');
+                document.getElementById('uploadStep3').classList.remove('hidden');
+
+                const bar = document.getElementById('uploadProgressBar');
+                const text = document.getElementById('uploadProgressText');
+                
+                let progress = 0;
+                const interval = setInterval(async () => {
+                    progress += Math.floor(Math.random() * 15) + 5;
+                    if (progress > 100) progress = 100;
+                    
+                    bar.style.width = progress + '%';
+                    text.innerText = progress + '%';
+
+                    if (progress === 100) {
+                        clearInterval(interval);
+                        
+                        // Save to Database
+                        const newApp = {
+                            id: 'app_' + Date.now(),
+                            name: state.tempUploadData.name,
+                            description: state.tempUploadData.desc,
+                            iconUrl: state.tempUploadData.iconData,
+                            apkFile: state.tempUploadData.apkData,
+                            authorId: state.currentUser.id,
+                            authorName: state.currentUser.username,
+                            downloads: 0,
+                            ageRating: this.calculateAIAgeRating(),
+                            reviews: [],
+                            isVerified: false,
+                            isEduVerified: document.getElementById('qEdu').checked,
+                            isDeleted: false
+                        };
+                        
+                        state.data.apps.push(newApp);
+                        await dbHelper.set('mainData', state.data);
+                        
+                        setTimeout(() => {
+                            ui.showToast('App published to P2P network!', 'success');
+                            ui.switchView('home');
+                        }, 500);
+                    }
+                }, 300); // Simulate network speed
+            }
+        };
+
+        // --- 7. Admin Panel ---
+        const admin = {
+            render() {
+                const uList = document.getElementById('adminUserList');
+                const aList = document.getElementById('adminAppList');
+                uList.innerHTML = '';
+                aList.innerHTML = '';
+
+                // Users
+                state.data.users.forEach(u => {
+                    const isBanned = state.data.bannedIPs.includes(u.ip);
+                    uList.innerHTML += `
+                        <div class="flex justify-between items-center p-3 bg-gray-50 rounded-xl border border-gray-100">
+                            <div>
+                                <span class="font-bold">${u.username}</span> ${u.isAdmin ? '<span class="text-red-500 text-xs ml-1">(Admin)</span>' : ''}
+                                <div class="text-xs text-gray-500">IP: ${u.ip}</div>
+                            </div>
+                            ${!u.isAdmin ? `
+                                <button onclick="admin.banIP('${u.ip}')" class="px-3 py-1 ${isBanned ? 'bg-gray-300' : 'bg-red-500 hover:bg-red-600'} text-white rounded text-xs font-bold">
+                                    ${isBanned ? 'Unban IP' : 'Ban IP'}
+                                </button>
+                            ` : ''}
+                        </div>
+                    `;
+                });
+
+                // Apps
+                state.data.apps.forEach(a => {
+                    aList.innerHTML += `
+                        <div class="p-3 bg-gray-50 rounded-xl border border-gray-100 mb-2 ${a.isDeleted ? 'opacity-50' : ''}">
+                            <div class="flex justify-between items-center mb-2">
+                                <span class="font-bold truncate max-w-[150px]">${a.name}</span>
+                                <div class="flex gap-1">
+                                    <button onclick="admin.toggleVerifyApp('${a.id}')" class="px-2 py-1 bg-blue-500 text-white rounded text-[10px] font-bold" title="Verify PlayDownloader"><i class="fa-solid fa-shield"></i></button>
+                                    <button onclick="admin.toggleDeleteApp('${a.id}')" class="px-2 py-1 ${a.isDeleted ? 'bg-green-500' : 'bg-red-500'} text-white rounded text-[10px] font-bold">${a.isDeleted ? 'Restore' : 'Delete'}</button>
+                                </div>
+                            </div>
+                            <div class="text-xs text-gray-500">By: ${a.authorName} | DLs: ${a.downloads}</div>
+                        </div>
+                    `;
+                });
+            },
+            async banIP(ip) {
+                if(state.data.bannedIPs.includes(ip)) {
+                    state.data.bannedIPs = state.data.bannedIPs.filter(i => i !== ip);
+                    ui.showToast('IP unbanned', 'info');
+                } else {
+                    state.data.bannedIPs.push(ip);
+                    ui.showToast('IP permanently banned', 'error');
+                }
+                await dbHelper.set('mainData', state.data);
+                this.render();
+            },
+            async toggleDeleteApp(id) {
+                const app = state.data.apps.find(a => a.id === id);
+                if(app) {
+                    app.isDeleted = !app.isDeleted;
+                    await dbHelper.set('mainData', state.data);
+                    ui.showToast(app.isDeleted ? 'App deleted' : 'App restored', 'info');
+                    this.render();
+                }
+            },
+            async toggleVerifyApp(id) {
+                const app = state.data.apps.find(a => a.id === id);
+                if(app) {
+                    app.isVerified = !app.isVerified;
+                    await dbHelper.set('mainData', state.data);
+                    ui.showToast('Verification status changed', 'success');
+                    this.render();
+                }
+            }
+        };
+
+        // --- 8. Event Listeners & Initialization ---
+        document.getElementById('upDesc')?.addEventListener('input', (e) => {
+            document.getElementById('descCount').innerText = e.target.value.length;
+        });
+
+        document.addEventListener('click', (e) => {
+            const menuBtn = e.target.closest('#userMenuContainer button');
+            const menu = document.getElementById('userDropdownMenu');
+            if (!menuBtn && menu && !menu.classList.contains('hidden')) {
+                menu.classList.add('hidden');
+            }
+        });
+
+        // Search in admin
+        document.getElementById('adminAppSearch')?.addEventListener('input', (e) => {
+            const query = e.target.value.toLowerCase();
+            const list = document.getElementById('adminAppList');
+            Array.from(list.children).forEach(child => {
+                if(child.innerText.toLowerCase().includes(query)) child.style.display = 'block';
+                else child.style.display = 'none';
+            });
+        });
+
+        window.onload = async () => {
+            document.getElementById('currentYear').innerText = new Date().getFullYear();
+            
+            try {
+                await dbHelper.init();
+                const savedData = await dbHelper.get('mainData');
+                if (savedData) {
+                    state.data = savedData;
+                }
+            } catch (e) {
+                console.error("IDB Error:", e);
+                ui.showToast("Database error, using temporary session.", "error");
             }
 
-            return (
-                <div className="min-h-screen flex flex-col">
-                    {message && (
-                        <div className={`fixed top-5 right-5 p-4 rounded-xl shadow-2xl z-50 transition-all font-bold border ${message.type === 'error' ? 'bg-red-900/95 border-red-500 text-white' : message.type === 'success' ? 'bg-green-900/95 border-green-500 text-white' : 'bg-blue-900/95 border-blue-500 text-white'}`}>
-                            {message.text}
-                        </div>
-                    )}
+            i18n.init();
+            ui.updateMenu();
+            appStore.renderApps();
 
-                    <nav className="glass-panel sticky top-0 z-40 border-b border-slate-700/50 shadow-lg">
-                        <div className="max-w-7xl mx-auto px-4 h-16 flex flex-col sm:flex-row items-center justify-between">
-                            <div className="flex items-center gap-4 w-full sm:w-auto justify-between sm:justify-start">
-                                <div className="flex items-center gap-2 cursor-pointer hover:opacity-80 transition" onClick={()=>window.location.hash = ''}>
-                                    <div className="bg-gradient-to-br from-blue-500 to-indigo-600 p-1.5 rounded-lg text-white shadow-lg"><Icons.Download /></div>
-                                    <span className="font-extrabold text-xl tracking-tight hidden sm:block text-transparent bg-clip-text bg-gradient-to-r from-blue-400 to-indigo-300">SuperDownloader</span>
-                                </div>
-                                <div className="flex items-center gap-1.5 px-3 py-1 bg-slate-900/80 rounded-full border border-slate-700 shadow-inner">
-                                    <div className={`w-2 h-2 rounded-full ${netStatus === 'Connected' ? 'bg-green-500 animate-pulse' : 'bg-red-500'}`}></div>
-                                    <span className="text-[10px] text-gray-300 font-bold tracking-wider uppercase">{netStatus}</span>
-                                </div>
-                            </div>
-
-                            <div className="flex items-center gap-2 sm:gap-4 mt-2 sm:mt-0 w-full sm:w-auto overflow-x-auto scrollbar-hide pb-1 sm:pb-0">
-                                <button onClick={()=>window.location.hash = ''} className={`whitespace-nowrap px-3 py-1.5 rounded-lg font-medium transition ${view==='home'?'bg-slate-700 text-white':'text-gray-400 hover:text-white'}`}>Library</button>
-                                {user ? (
-                                    <React.Fragment>
-                                        <button onClick={()=>window.location.hash = '#/upload'} className={`whitespace-nowrap px-3 py-1.5 rounded-lg font-medium transition ${view==='upload'?'bg-blue-600 text-white':'text-gray-400 hover:text-white'}`}>Upload</button>
-                                        <button onClick={()=>window.location.hash = '#/dashboard'} className={`whitespace-nowrap px-3 py-1.5 rounded-lg font-bold transition flex items-center gap-1 ${view==='dashboard'?'bg-slate-700 text-white':'text-gray-300 hover:text-white border border-slate-700'}`}><Icons.Dashboard/> My Files</button>
-                                        <div className="w-px h-6 bg-slate-700 mx-1 hidden sm:block"></div>
-                                        <div className="flex items-center gap-3 text-sm ml-auto bg-slate-800/50 px-3 py-1 rounded-full border border-slate-700/50">
-                                            <UserBadge nick={user.nick} usersList={usersList} />
-                                            <button onClick={logout} className="text-red-400 hover:text-red-300 text-[10px] uppercase font-bold tracking-wider ml-2 border-l border-slate-600 pl-3">Logout</button>
-                                        </div>
-                                    </React.Fragment>
-                                ) : (
-                                    <button onClick={()=>setView('auth')} className="bg-blue-600 hover:bg-blue-500 text-white px-5 py-1.5 rounded-lg font-bold transition whitespace-nowrap ml-auto shadow-lg">Login</button>
-                                )}
-                            </div>
-                        </div>
-                    </nav>
-
-                    <main className="flex-1 pb-20">
-                        {loading ? (
-                            <div className="flex justify-center items-center h-64 text-gray-400 font-medium animate-pulse">Syncing Network Database...</div>
-                        ) : (
-                            <div>
-                                {view === 'home' && <HomeView files={files} usersList={usersList} setView={setView} setSelectedFileId={setViewArg} />}
-                                {view === 'file_details' && <FileDetailsView user={user} files={files} selectedFileId={viewArg} comments={comments} usersList={usersList} updateDatabase={updateDatabase} showMessage={showMessage} setView={setView} />}
-                                {view === 'user_profile' && <UserProfileView viewArg={viewArg} files={files} usersList={usersList} />}
-                                {view === 'dashboard' && user && <DashboardView user={user} files={files} updateDatabase={updateDatabase} showMessage={showMessage} />}
-                                {view === 'upload' && user && <UploadView user={user} updateDatabase={updateDatabase} showMessage={showMessage} setView={setView} />}
-                                {view === 'admin' && user && (user.role === 'admin' || user.role === 'owner') && <AdminPanel user={user} usersList={usersList} files={files} reports={reports} updateDatabase={updateDatabase} showMessage={showMessage} />}
-                                {view === 'auth' && !user && <AuthView usersList={usersList} setUser={setUser} setView={setView} showMessage={showMessage} updateDatabase={updateDatabase} />}
-                            </div>
-                        )}
-                    </main>
-                </div>
-            );
+            // Hash admin check on load
+            if (window.location.hash) {
+                auth.checkAdmin(window.location.hash);
+            }
         };
-
-        const root = ReactDOM.createRoot(document.getElementById('root'));
-        root.render(<App />);
     </script>
 </body>
 </html>
